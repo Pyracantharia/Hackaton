@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,9 +6,88 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserRole {
+  USER
+  EMPLOYEE
+  ADMIN
+}
+
+enum HouseholdRelationship {
+  SELF
+  CHILD
+  RELATIVE
+}
+
+enum SchoolLevel {
+  PRIMARY
+  COLLEGE
+  LYCEE
+  HIGHER_EDUCATION
+  OTHER
+}
+
+enum ConsentType {
+  SERVICE_ALERTS
+  MOBILITY_NEWS
+  PARTNER_OFFERS
+}
+
 model User {
-  id String @id @default(uuid())
-  name String
-  email String @unique
-  password String
+  id            String      @id @default(uuid())
+  firstName     String      @default("")
+  lastName      String      @default("")
+  email         String      @unique
+  phone         String      @default("")
+  passwordHash  String      @default("")
+  role          UserRole    @default(USER)
+  phoneVerified Boolean     @default(false)
+  emailVerified Boolean     @default(false)
+  households    Household[] @relation("HouseholdOwner")
+  consents      Consent[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Household {
+  id        String            @id @default(uuid())
+  ownerId   String
+  owner     User              @relation("HouseholdOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  members   HouseholdMember[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([ownerId])
+}
+
+model HouseholdMember {
+  id                    String                @id @default(uuid())
+  householdId           String
+  household             Household             @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  firstName             String
+  lastName              String
+  birthDate             DateTime?
+  relationship          HouseholdRelationship
+  schoolLevel           SchoolLevel?
+  department            String?
+  isHolder              Boolean               @default(false)
+  isPayer               Boolean               @default(false)
+  isLegalRepresentative Boolean               @default(false)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([householdId])
+}
+
+model Consent {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      ConsentType
+  accepted  Boolean
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([userId, type])
+  @@index([userId])
 }

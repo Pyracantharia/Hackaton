@@ -1,0 +1,66 @@
+import type { IdfDepartment, RegisterFamilyResponse, SchoolLevel } from "@/lib/api/types";
+
+export type ParentForm = {
+  confirmationPassword: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  password: string;
+  phone: string;
+};
+
+export type ChildForm = {
+  birthDate: string;
+  department: IdfDepartment;
+  firstName: string;
+  lastName: string;
+  schoolLevel: SchoolLevel;
+};
+
+export type RolesForm = {
+  parentIsLegalRepresentative: boolean;
+  parentIsPayer: boolean;
+  sameAddress: boolean;
+};
+
+export type ConsentsForm = {
+  mobilityNews: boolean;
+  partnerOffers: boolean;
+  serviceAlerts: boolean;
+};
+
+export type VerificationForm = {
+  emailCode: string;
+  smsCode: string;
+};
+
+export type RegisterFormState = {
+  child: ChildForm;
+  consents: ConsentsForm;
+  parent: ParentForm;
+  roles: RolesForm;
+  verification: VerificationForm;
+};
+
+export type RegisterErrors = Record<string, string>;
+
+export type RegisterResult = RegisterFamilyResponse;
+
+export const schoolLevelLabels: Record<SchoolLevel, string> = {
+  PRIMARY: "École primaire",
+  COLLEGE: "Collège",
+  LYCEE: "Lycée",
+  HIGHER_EDUCATION: "Études supérieures",
+  OTHER: "Autre",
+};
+
+export const departmentLabels: Record<IdfDepartment, string> = {
+  "75": "Paris (75)",
+  "77": "Seine-et-Marne (77)",
+  "78": "Yvelines (78)",
+  "91": "Essonne (91)",
+  "92": "Hauts-de-Seine (92)",
+  "93": "Seine-Saint-Denis (93)",
+  "94": "Val-de-Marne (94)",
+  "95": "Val-d'Oise (95)",
+};

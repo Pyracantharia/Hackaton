@@ -2,25 +2,46 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #25303b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-idfm-blue: #64b5f6;
+  --color-idfm-interaction: #1976d2;
+  --color-idfm-focus: #0050aa;
+  --color-idfm-anthracite: #25303b;
+  --color-idfm-light: #f5f9ff;
+  --color-idfm-medium: #deeeff;
+  --color-status-success: #007d44;
+  --color-status-successLight: #53b476;
+  --color-status-warning: #f39224;
+  --color-status-warningLight: #ffe500;
+  --color-status-danger: #c52625;
+  --color-status-dangerLight: #d84554;
+  --color-neutral-dark: #25303b;
+  --color-neutral-medium: #53606e;
+  --color-neutral-light: #dddddd;
+  --color-neutral-xlight: #f9f9f9;
+  --color-neutral-white: #ffffff;
+  --font-sans: "Avenir Next", "Segoe UI", Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: #deeeff;
+  color: #25303b;
 }
