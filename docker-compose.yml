@@ -1,5 +1,4 @@
 services:
-
   frontend:
     container_name: frontend
     build:
@@ -13,7 +12,10 @@ services:
       - /app/node_modules
       - /app/.next
     ports:
-      - "3001:3000"
+      - "3000:3000" # Changement ici pour aligner le port hôte et conteneur
+    environment:
+      - WATCHPACK_POLLING=true
+      - NEXT_OUTPUT_WSS_PROXY=wss://app.cestpeutetrepasdesrumeurs.space/_next/webpack-hmr
     depends_on:
       - backend
     networks:
@@ -35,7 +37,6 @@ services:
     networks:
       - hackathon-network
 
-
   db:
     container_name: db
     image: postgres:latest
@@ -51,7 +52,7 @@ services:
       - db_data:/var/lib/postgresql
     networks:
       - hackathon-network
-  
+
 volumes:
   db_data:
 
