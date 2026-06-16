@@ -2,13 +2,14 @@ import type { ReactNode } from "react";
 
 type InfoBoxProps = {
   children: ReactNode;
-  tone?: "blue" | "green" | "orange";
+  tone?: "blue" | "green" | "orange" | "red";
 };
 
 const tones = {
   blue: "border-idfm-medium bg-idfm-light text-idfm-anthracite",
   green: "border-status-successLight bg-green-50 text-status-success",
   orange: "border-status-warning bg-orange-50 text-idfm-anthracite",
+  red: "border-status-danger bg-red-50 text-status-danger",
 };
 
 export function InfoBox({ children, tone = "blue" }: InfoBoxProps) {

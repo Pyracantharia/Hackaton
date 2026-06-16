@@ -1,0 +1,158 @@
+import type {
+  DashboardMember,
+  HouseholdDashboardResponse,
+  MemberDetailResponse,
+} from "../api/types";
+
+const manager: DashboardMember = {
+  id: "demo-manager",
+  firstName: "Sophie",
+  lastName: "Martin",
+  relationship: "SELF",
+  relationLabel: "Gestionnaire du foyer",
+  profileType: "MANAGER",
+  currentProduct: "Navigo Annuel",
+  recommendedProduct: null,
+  status: "ACTIVE",
+  nextAction: "Voir mon titre",
+  payerName: "Sophie Martin",
+  isHolder: true,
+  isPayer: true,
+  isLegalRepresentative: true,
+  isDemoProfile: false,
+};
+
+const youngMember: DashboardMember = {
+  id: "demo-lucas",
+  firstName: "Lucas",
+  lastName: "Martin",
+  relationship: "CHILD",
+  relationLabel: "Enfant / jeune",
+  profileType: "YOUNG",
+  currentProduct: "Imagine R Scolaire",
+  recommendedProduct: null,
+  status: "TO_RENEW",
+  nextAction: "Renouveler avant la rentrée",
+  payerName: "Sophie Martin",
+  isHolder: true,
+  isPayer: false,
+  isLegalRepresentative: false,
+  isDemoProfile: false,
+};
+
+export const familyDashboardMock: HouseholdDashboardResponse = {
+  household: {
+    id: "demo-household",
+    name: "Famille Martin",
+  },
+  manager: {
+    id: "demo-manager",
+    firstName: "Sophie",
+    lastName: "Martin",
+  },
+  summary: {
+    membersCount: 2,
+    urgentActionsCount: 1,
+    renewalsCount: 1,
+    offersToCheckCount: 0,
+  },
+  members: [manager, youngMember],
+  notifications: [
+    {
+      id: "notif-renewal",
+      type: "RENEWAL",
+      severity: "WARNING",
+      title: "Lucas — Renouvellement Imagine R conseillé",
+      message:
+        "Les demandes sont nombreuses avant la rentrée. Renouvelez dès maintenant pour éviter les délais.",
+      memberId: youngMember.id,
+      createdAt: "2026-06-16T09:00:00.000Z",
+    },
+    {
+      id: "notif-service",
+      type: "SERVICE_INFO",
+      severity: "INFO",
+      title: "Information service",
+      message:
+        "Les alertes importantes sont liées au suivi de vos titres et ne sont pas des communications commerciales.",
+      memberId: null,
+      createdAt: "2026-06-16T07:00:00.000Z",
+    },
+  ],
+  recentActivity: [
+    {
+      id: "activity-space",
+      label: "Espace famille créé.",
+      createdAt: "2026-06-16T09:00:00.000Z",
+    },
+    {
+      id: "activity-lucas",
+      label: "Lucas a été ajouté comme profil enfant.",
+      createdAt: "2026-06-16T09:05:00.000Z",
+    },
+    {
+      id: "activity-payer",
+      label: "Role payeur confirme pour Sophie.",
+      createdAt: "2026-06-16T09:06:00.000Z",
+    },
+    {
+      id: "activity-young",
+      label: "Renouvellement Imagine R recommande pour Lucas.",
+      createdAt: "2026-06-16T09:10:00.000Z",
+    },
+  ],
+};
+
+export function getDemoMemberDetail(memberId: string): MemberDetailResponse {
+  const member = familyDashboardMock.members.find((candidate) => candidate.id === memberId) ?? youngMember;
+
+  if (member.profileType === "MANAGER") {
+    return {
+      household: familyDashboardMock.household,
+      manager: familyDashboardMock.manager,
+      member,
+      householdRole: "Gestionnaire du foyer",
+      overview: "Votre espace centralise les profils, les paiements et les prochaines actions du foyer.",
+      supportNote: "Vous êtes le point d'entrée principal pour le suivi des dossiers et des alertes.",
+      accessibilityNote: null,
+      documents: ["Attestation employeur", "RIB si nécessaire"],
+      actions: [
+        {
+          label: "Voir mon titre",
+          href: "/dashboard/family?tab=profiles",
+          variant: "primary",
+        },
+        {
+          label: "Attestation employeur",
+          href: "/dashboard/family",
+          variant: "secondary",
+        },
+      ],
+      alerts: familyDashboardMock.notifications.filter((notification) => notification.memberId === null),
+    };
+  }
+
+  return {
+    household: familyDashboardMock.household,
+    manager: familyDashboardMock.manager,
+    member,
+    householdRole: "Porteur du titre",
+    overview: "Lucas peut être renouvelé dès maintenant pour anticiper la rentrée scolaire.",
+    supportNote: "Payeur : Sophie Martin. Documents attendus : photo récente et certificat scolaire.",
+    accessibilityNote: null,
+    documents: ["Photo récente", "Certificat scolaire", "Pièce d'identité si demandée"],
+    actions: [
+      {
+        label: "Commencer le renouvellement",
+        href: `/dashboard/family/renewal/${member.id}`,
+        variant: "primary",
+      },
+      {
+        label: "Voir les justificatifs",
+        href: `/dashboard/family/members/${member.id}#documents`,
+        variant: "secondary",
+      },
+    ],
+    alerts: familyDashboardMock.notifications.filter((notification) => notification.memberId === member.id),
+  };
+}

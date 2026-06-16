@@ -1,135 +1,285 @@
 "use client";
 
-import { useEffect, useState, startTransition } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { Button } from "@/components/atoms/Button";
+import { Suspense, startTransition, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { InfoBox } from "@/components/molecules/InfoBox";
-import { ProfileSummaryCard } from "@/components/molecules/ProfileSummaryCard";
-import { getMyHousehold } from "@/lib/api/households";
-import type { RegisterFamilyResponse } from "@/lib/api/types";
+import { AddMemberPanel } from "@/components/organisms/AddMemberPanel";
+import { FamilyAlertsSection } from "@/components/organisms/FamilyAlertsSection";
+import { FamilyHelpSection } from "@/components/organisms/FamilyHelpSection";
+import { FamilyMembersSection } from "@/components/organisms/FamilyMembersSection";
+import { FamilyQuickActions } from "@/components/organisms/FamilyQuickActions";
+import { FamilyRecentActivity } from "@/components/organisms/FamilyRecentActivity";
+import { LostPassModal } from "@/components/organisms/LostPassModal";
+import { DashboardLayout } from "@/components/templates/DashboardLayout";
+import {
+  createLostPassSupportCase,
+  getMyHouseholdDashboard,
+} from "@/lib/api/households";
+import { familyDashboardMock } from "@/lib/demo/familyDashboardMock";
+import type { HouseholdDashboardResponse } from "@/lib/api/types";
 
-const fallback: RegisterFamilyResponse = {
-  accessToken: "",
-  household: {
-    id: "demo",
-    name: "Famille Martin",
-  },
-  members: [
-    {
-      id: "parent",
-      firstName: "Sophie",
-      lastName: "Martin",
-      relationship: "SELF",
-      isHolder: false,
-      isPayer: true,
-      isLegalRepresentative: true,
-    },
-    {
-      id: "child",
-      firstName: "Lucas",
-      lastName: "Martin",
-      relationship: "CHILD",
-      isHolder: true,
-      isPayer: false,
-      isLegalRepresentative: false,
-    },
-  ],
-  nextAction: {
-    type: "RECOMMEND_PRODUCT",
-    label: "Voir le forfait recommandé pour Lucas",
-  },
-  user: {
-    id: "demo",
-    firstName: "Sophie",
-    lastName: "Martin",
-    email: "sophie.martin@example.com",
-  },
+type FlashMessage = {
+  message: string;
+  tone: "blue" | "green" | "orange" | "red";
 };
 
-export default function FamilyDashboardPage() {
-  const [data, setData] = useState<RegisterFamilyResponse>(() => {
-    if (typeof window === "undefined") return fallback;
+type DashboardTabId = "overview" | "profiles" | "titles" | "services" | "alerts" | "help";
 
-    const stored = sessionStorage.getItem("familyRegisterResult");
-    if (!stored) return fallback;
+function getActiveTab(value: string | null): DashboardTabId {
+  switch (value) {
+    case "profiles":
+    case "titles":
+    case "services":
+    case "alerts":
+    case "help":
+      return value;
+    default:
+      return "overview";
+  }
+}
 
-    try {
-      return JSON.parse(stored) as RegisterFamilyResponse;
-    } catch {
-      return fallback;
-    }
-  });
+function getStoredUserName() {
+  if (typeof window === "undefined") {
+    return familyDashboardMock.manager.firstName;
+  }
+
+  const storedUser = sessionStorage.getItem("familyUser");
+
+  if (!storedUser) {
+    return familyDashboardMock.manager.firstName;
+  }
+
+  try {
+    const user = JSON.parse(storedUser) as { firstName?: string };
+    return user.firstName ?? familyDashboardMock.manager.firstName;
+  } catch {
+    return familyDashboardMock.manager.firstName;
+  }
+}
+
+function buildSummaryItems(data: HouseholdDashboardResponse) {
+  return [
+    `Bonjour ${data.manager.firstName}`,
+    `${data.summary.membersCount} profils suivis`,
+    `${data.summary.renewalsCount} renouvellement conseille`,
+    `${data.summary.offersToCheckCount} offre a verifier`,
+    `${data.summary.urgentActionsCount} action urgente`,
+  ];
+}
+
+function FamilyDashboardFallback() {
+  return (
+    <DashboardLayout
+      activeTab="overview"
+      breadcrumbs={[
+        { href: "/", label: "Accueil" },
+        { label: "Mon foyer Navigo" },
+      ]}
+      subtitle="Gerez les titres de votre foyer depuis un seul espace, avec des alertes, des profils et des actions adaptees a chaque situation."
+      summaryItems={buildSummaryItems(familyDashboardMock)}
+      title="Mon foyer Navigo"
+      userName={familyDashboardMock.manager.firstName}
+    >
+      <InfoBox>Chargement du foyer et des prochaines actions...</InfoBox>
+    </DashboardLayout>
+  );
+}
+
+function FamilyDashboardPageContent() {
+  const searchParams = useSearchParams();
+  const [data, setData] = useState<HouseholdDashboardResponse>(familyDashboardMock);
+  const [isLoading, setIsLoading] = useState(() => (
+    typeof window !== "undefined" ? Boolean(localStorage.getItem("familyAccessToken")) : true
+  ));
+  const [flash, setFlash] = useState<FlashMessage | null>(null);
+  const [isLostPassOpen, setIsLostPassOpen] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>(undefined);
+  const [isSubmittingLostPass, setIsSubmittingLostPass] = useState(false);
+  const activeTab = getActiveTab(searchParams.get("tab"));
 
   useEffect(() => {
     const accessToken = localStorage.getItem("familyAccessToken");
-    const storedUser = sessionStorage.getItem("familyUser");
-    if (!accessToken) return;
 
-    void getMyHousehold(accessToken)
-      .then((household) => {
-        const user = storedUser ? JSON.parse(storedUser) : fallback.user;
+    if (!accessToken) {
+      return;
+    }
+
+    void getMyHouseholdDashboard(accessToken)
+      .then((response) => {
         startTransition(() => {
-          setData({
-            accessToken,
-            household: {
-              id: household.id,
-              name: household.name,
-            },
-            members: household.members,
-            nextAction: {
-              type: "RECOMMEND_PRODUCT",
-              label: `Voir le forfait recommandé pour ${
-                household.members.find((member) => member.relationship === "CHILD")?.firstName ?? "Lucas"
-              }`,
-            },
-            user,
-          });
+          setData(response);
         });
       })
-      .catch(() => undefined);
+      .catch(() => {
+        startTransition(() => {
+          setData((current) => current ?? familyDashboardMock);
+        });
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
-  const parent = data.members.find((member) => member.relationship === "SELF") ?? fallback.members[0];
-  const child = data.members.find((member) => member.relationship === "CHILD") ?? fallback.members[1];
+  async function handleLostPassSubmit(payload: { memberId: string; reason: string }) {
+    const accessToken = localStorage.getItem("familyAccessToken");
+    setIsSubmittingLostPass(true);
+
+    let message = "Demande de remplacement creee en mode demo.";
+
+    if (accessToken) {
+      try {
+        const response = await createLostPassSupportCase(accessToken, payload);
+        message = response.message;
+      } catch {
+        message = "Demande de remplacement creee en mode demo.";
+      }
+    }
+
+    const targetMember = data.members.find((member) => member.id === payload.memberId);
+
+    startTransition(() => {
+      setData((current) => ({
+        ...current,
+        members: current.members.map((member) => (
+          member.id === payload.memberId
+            ? {
+                ...member,
+                status: "LOST",
+                nextAction: "Suivre la demande de remplacement",
+              }
+            : member
+        )),
+        recentActivity: [
+          {
+            id: `activity-lost-pass-${Date.now()}`,
+            label: `${targetMember?.firstName ?? "Le profil"} a signale une perte de passe.`,
+            createdAt: new Date().toISOString(),
+          },
+          ...current.recentActivity,
+        ].slice(0, 6),
+      }));
+      setFlash({ message, tone: "green" });
+      setIsLostPassOpen(false);
+    });
+
+    setIsSubmittingLostPass(false);
+  }
+
+  function handleSelectProfile(profileType: string) {
+    if (profileType === "young") {
+      setFlash({
+        message: "Le parcours enfant / jeune est deja couvert par Lucas dans cette demo.",
+        tone: "blue",
+      });
+      return;
+    }
+
+    if (profileType === "senior") {
+      setFlash({
+        message: "Le parcours retraite / senior sera branche sur un vrai profil des qu'il sera ajoute au foyer.",
+        tone: "blue",
+      });
+      return;
+    }
+
+    setFlash({
+      message: "Cette cible sera disponible prochainement dans le compte famille.",
+      tone: "orange",
+    });
+  }
+
+  function renderActiveSection() {
+    switch (activeTab) {
+      case "profiles":
+        return (
+          <div className="grid gap-12">
+            <FamilyMembersSection members={data.members} />
+            <AddMemberPanel onSelectProfile={handleSelectProfile} />
+          </div>
+        );
+      case "titles":
+        return (
+          <FamilyMembersSection
+            cardsId="titles-grid"
+            description="Retrouvez l'etat des abonnements, les renouvellements conseilles et les prochaines actions pour chaque profil."
+            members={data.members}
+            sectionId="titles"
+            title="Titres du foyer"
+          />
+        );
+      case "services":
+        return (
+          <FamilyQuickActions
+            members={data.members}
+            onLostPassRequested={(memberId) => {
+              setSelectedMemberId(memberId);
+              setIsLostPassOpen(true);
+            }}
+          />
+        );
+      case "alerts":
+        return <FamilyAlertsSection notifications={data.notifications} />;
+      case "help":
+        return <FamilyHelpSection />;
+      case "overview":
+      default:
+        return (
+          <div className="grid gap-12">
+            <FamilyAlertsSection notifications={data.notifications} />
+            <FamilyMembersSection members={data.members} />
+            <AddMemberPanel onSelectProfile={handleSelectProfile} />
+            <FamilyQuickActions
+              members={data.members}
+              onLostPassRequested={(memberId) => {
+                setSelectedMemberId(memberId);
+                setIsLostPassOpen(true);
+              }}
+            />
+            <FamilyHelpSection />
+            <FamilyRecentActivity items={data.recentActivity} />
+          </div>
+        );
+    }
+  }
 
   return (
-    <main className="min-h-screen bg-neutral-xlight">
-      <header className="border-b border-neutral-light bg-white px-5 py-4">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <Image src="/assets/logos/idfm-connect-logo.svg" alt="Île-de-France Mobilités Connect" width={240} height={48} className="h-8 w-auto" />
-          <Link href="/register" className="text-sm font-semibold text-idfm-interaction">
-            Nouvelle inscription
-          </Link>
-        </div>
-      </header>
-      <section className="mx-auto w-full max-w-6xl px-5 py-8">
-        <p className="text-sm font-bold text-idfm-interaction">{data.household.name}</p>
-        <h1 className="mt-3 text-3xl font-bold text-idfm-anthracite">Bonjour {data.user.firstName}</h1>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-neutral-medium">
-          Votre espace famille centralise les profils, les rôles et les prochaines actions liées aux titres de transport.
-        </p>
+    <DashboardLayout
+      activeTab={activeTab}
+      breadcrumbs={[
+        { href: "/", label: "Accueil" },
+        { label: "Mon foyer Navigo" },
+      ]}
+      subtitle="Gerez les titres de votre foyer depuis un seul espace, avec des alertes, des profils et des actions adaptees a chaque situation."
+      summaryItems={buildSummaryItems(data)}
+      title="Mon foyer Navigo"
+      userName={getStoredUserName()}
+    >
+      <div className="grid gap-8">
+        {isLoading ? (
+          <InfoBox>Chargement du foyer et des prochaines actions...</InfoBox>
+        ) : null}
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <ProfileSummaryCard
-            badges={["Compte principal", parent.isPayer ? "Payeur" : "Gestionnaire"]}
-            name={`${parent.firstName} ${parent.lastName}`}
-            subtitle="Compte principal"
-          />
-          <ProfileSummaryCard
-            badges={["Profil enfant", child.isHolder ? "Porteur" : "Suivi"]}
-            name={`${child.firstName} ${child.lastName}`}
-            subtitle="Profil rattaché au foyer"
-          />
-        </div>
+        {flash ? <InfoBox tone={flash.tone}>{flash.message}</InfoBox> : null}
 
-        <div className="mt-8 grid gap-4 lg:grid-cols-[1.4fr_0.8fr]">
-          <InfoBox tone="orange">
-            Renouvellement Imagine R disponible prochainement. Une alerte vous préviendra dès que le dossier pourra être complété.
-          </InfoBox>
-          <Button type="button">{data.nextAction.label}</Button>
-        </div>
-      </section>
-    </main>
+        {renderActiveSection()}
+      </div>
+
+      {isLostPassOpen ? (
+        <LostPassModal
+          defaultMemberId={selectedMemberId}
+          isOpen={isLostPassOpen}
+          isSubmitting={isSubmittingLostPass}
+          members={data.members}
+          onClose={() => setIsLostPassOpen(false)}
+          onSubmit={handleLostPassSubmit}
+        />
+      ) : null}
+    </DashboardLayout>
+  );
+}
+
+export default function FamilyDashboardPage() {
+  return (
+    <Suspense fallback={<FamilyDashboardFallback />}>
+      <FamilyDashboardPageContent />
+    </Suspense>
   );
 }
