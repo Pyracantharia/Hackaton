@@ -1,0 +1,1084 @@
+Tu es Codex et tu dois continuer le développement de notre projet de hackathon Comutitres / Île-de-France Mobilités.
+
+## 1. Contexte général du hackathon
+
+Nous travaillons sur un hackathon autour de l’amélioration de l’expérience utilisateur Comutitres / Île-de-France Mobilités.
+
+Le but n’est pas de refaire complètement le site IDF Mobilités ou de créer une application sans lien avec l’existant. Le but est d’améliorer l’expérience actuelle en apportant une vraie proposition de valeur métier, UX et technique.
+
+Notre concept principal est :
+
+> Compte Famille Navigo
+
+L’idée est de permettre à une personne principale, appelée gestionnaire du foyer, de gérer plusieurs profils rattachés à son espace familial : enfant, jeune, étudiant, conjoint, personne âgée, proche aidé, etc.
+
+Pour le MVP, nous développons surtout deux cibles fonctionnelles :
+
+1. Jeune / enfant scolarisé
+
+   * Exemple : enfant ou adolescent avec un forfait Imagine R / Navigo Junior.
+   * Enjeux : renouvellement, justificatifs, photo, porteur/payeur, rentrée scolaire, anticipation des pics de charge.
+
+2. Retraité / senior
+
+   * Exemple : parent âgé ou retraité rattaché à l’espace familial.
+   * Enjeux : accompagnement, lisibilité, aide à l’orientation vers Navigo Senior ou Améthyste, accessibilité.
+
+Même si le MVP ne développe que ces deux cibles, l’interface doit montrer que le système est extensible à toutes les cibles familiales : conjoint, proche aidé, étudiant, bénéficiaire de réduction, etc.
+
+## 2. Screens IDF Mobilités fournis
+
+Nous allons te joindre plusieurs captures d’écran du dashboard actuel IDF Mobilités “Mon espace”.
+
+Tu dois t’en inspirer pour comprendre l’existant, mais tu ne dois pas le copier à l’identique.
+
+Les screens montrent notamment :
+
+* une page “Mon espace” avec une structure institutionnelle ;
+* une navigation par onglets :
+
+  * Bienvenue ;
+  * Mon Navigo ;
+  * Mon téléphone ;
+  * Mes services ;
+  * Mes favoris ;
+  * Mes préférences ;
+  * FAQ ;
+* une carte “Bienvenue dans votre nouvel espace” ;
+* une carte d’association de contrats ;
+* une bannière bleue “Besoin d’Imagine R pour cette année scolaire ?” ;
+* une page “Mon Navigo” avec deux cartes :
+
+  * “Associer mes abonnements” ;
+  * “Souscrire un nouvel abonnement” ;
+* des blocs “Gérer mon compte” et “Aide et contacts” ;
+* un design très sobre, institutionnel, clair, avec beaucoup de blanc, du bleu IDFM, des cartes à bordures fines et une navigation simple.
+
+Notre amélioration doit conserver cette logique rassurante et institutionnelle, mais en la modernisant et en ajoutant une vraie valeur :
+
+> Passer d’un espace individuel “Mon espace / Mon Navigo” à un espace familial “Mon foyer Navigo”, où chaque profil dispose de son titre, de son statut et de ses prochaines actions.
+
+## 3. Ce qui existe déjà dans le projet
+
+Nous avons déjà commencé le register familial.
+
+Le register doit normalement permettre :
+
+* de créer un compte principal parent / gestionnaire ;
+* de créer un espace famille ;
+* d’ajouter un enfant ;
+* d’expliquer la notion porteur/payeur ;
+* de gérer les consentements ;
+* d’arriver ensuite vers un dashboard famille.
+
+Avant de coder :
+
+* inspecte absolument le projet existant ;
+* identifie les composants déjà créés ;
+* identifie les routes déjà existantes ;
+* identifie les types déjà présents ;
+* identifie les services API déjà créés ;
+* identifie les tokens Tailwind déjà mis en place.
+
+Très important :
+
+* Ne réécris pas tout.
+* Ne supprime pas le travail existant.
+* Réutilise les composants déjà créés.
+* Respecte la structure actuelle.
+* Respecte les tokens Tailwind déjà ajoutés.
+* Respecte les conventions de nommage déjà présentes.
+* Si des composants existent déjà dans `components/atoms`, `components/molecules`, `components/organisms` ou une autre structure, utilise-les au lieu de recréer des doublons.
+* Si un composant existant est incomplet, améliore-le proprement plutôt que d’en créer un nouveau identique.
+* Si le register stocke déjà un `accessToken`, un résumé famille ou des infos en `localStorage` / `sessionStorage`, exploite-les pour alimenter le dashboard.
+
+## 4. Objectif de cette tâche
+
+Créer un dashboard famille mobile-first, beau, clair et fonctionnel, qui devient l’écran central après l’inscription.
+
+Ce dashboard doit être une amélioration du dashboard actuel IDF Mobilités.
+
+L’objectif est que le gestionnaire du foyer puisse :
+
+* voir tous les profils de sa famille ;
+* comprendre rapidement le statut de chaque titre ;
+* voir les actions prioritaires ;
+* accéder au détail d’un profil ;
+* lancer un renouvellement ou une recommandation de forfait ;
+* voir les alertes importantes ;
+* déclarer une perte de passe ;
+* déclarer un passe trouvé ;
+* comprendre que le système pourra gérer d’autres cibles plus tard.
+
+Le dashboard doit donner une impression de produit complet, pas simplement une page de test.
+
+## 5. Stack technique
+
+Le projet utilise :
+
+* Frontend : Next.js
+* Backend : NestJS
+* Base de données : Prisma si déjà en place
+* CSS : Tailwind CSS
+* Application mobile-first, potentiellement encapsulable avec Capacitor
+
+Adapte-toi à l’existant.
+
+Si l’API backend est prête, branche le dashboard dessus.
+
+Si certaines données ne sont pas encore disponibles, prévois un fallback de démo propre côté frontend, mais structure le code pour pouvoir remplacer facilement les mocks par l’API.
+
+## 6. Route frontend attendue
+
+Créer ou améliorer la page :
+
+`/dashboard/family`
+
+Cette page doit être responsive :
+
+* mobile-first ;
+* lisible sur desktop ;
+* pas de scroll horizontal ;
+* cartes bien espacées ;
+* interface claire, institutionnelle et moderne.
+
+Si une route dashboard existe déjà, adapte-toi à la convention existante plutôt que de créer une route doublon inutile.
+
+## 7. Vision UX du dashboard
+
+Le dashboard doit répondre à cette logique :
+
+> Une personne principale gère plusieurs profils, chaque profil ayant son propre titre, son statut, ses actions et ses alertes.
+
+Exemple :
+
+Compte principal :
+
+* Sophie Martin
+* Gestionnaire du foyer
+* Payeur principal
+
+Profils :
+
+* Sophie Martin — Moi — Navigo Annuel actif
+* Lucas Martin — Enfant / jeune — Imagine R à renouveler
+* Marie Dupont — Parent âgé / retraitée — Offre Senior à vérifier
+
+Pour le MVP, on veut surtout afficher et rendre actionnables :
+
+* le profil jeune ;
+* le profil retraité.
+
+Les autres profils peuvent être visibles comme possibilités d’ajout futures.
+
+## 8. Adapter l’existant IDF Mobilités
+
+Le dashboard actuel IDF Mobilités repose sur une structure :
+
+* header institutionnel ;
+* titre “Mon espace” ;
+* navigation par onglets ;
+* cartes d’action ;
+* bannières d’information ;
+* blocs d’aide ;
+* footer institutionnel.
+
+Nous voulons garder l’idée générale, mais la transformer.
+
+Au lieu de :
+
+> Mon espace → Mon Navigo → Associer mes abonnements / Souscrire un nouvel abonnement
+
+Nous voulons :
+
+> Mon foyer Navigo → Profils du foyer → Actions personnalisées par profil
+
+Tu peux conserver une navigation inspirée des onglets actuels, mais adaptée au concept famille.
+
+Exemple d’onglets possibles :
+
+* Vue d’ensemble
+* Profils
+* Titres
+* Services
+* Alertes
+* Aide
+
+Ou bien une version mobile plus simple avec sections verticales.
+
+Il faut éviter de faire un dashboard trop éloigné de l’identité IDFM. Le rendu doit rester crédible pour un service public.
+
+## 9. Structure attendue du dashboard
+
+### Section 1 — Header / accueil
+
+Afficher un header clair.
+
+Titre possible :
+
+> Mon foyer Navigo
+
+Sous-titre possible :
+
+> Gérez les titres de votre foyer depuis un seul espace.
+
+Afficher aussi :
+
+> Bonjour Sophie
+
+Résumé rapide :
+
+* 3 profils suivis ;
+* 1 renouvellement conseillé ;
+* 1 offre à vérifier ;
+* 1 action urgente.
+
+Exemple :
+
+> 1 renouvellement à prévoir avant la rentrée.
+
+Le header doit s’inspirer du grand bloc “Mon espace” du site IDF Mobilités : large zone claire, titre fort, lien ou action secondaire.
+
+Action secondaire possible :
+
+> Gérer mes informations
+
+### Section 2 — Navigation interne
+
+Créer une navigation simple inspirée des onglets IDFM.
+
+Sur desktop :
+
+* Vue d’ensemble
+* Profils
+* Titres
+* Services
+* Alertes
+* Aide
+
+Sur mobile :
+
+* navigation horizontale scrollable ou compacte ;
+* ne pas faire de menu complexe.
+
+Les onglets peuvent être visuels seulement si toutes les pages ne sont pas encore développées, mais l’onglet “Vue d’ensemble” doit être fonctionnel.
+
+### Section 3 — Alertes importantes
+
+Créer un bloc d’alertes prioritaires.
+
+Exemples :
+
+1. Lucas — Renouvellement Imagine R conseillé
+   Texte :
+
+   > Les demandes sont nombreuses avant la rentrée. Renouvelez dès maintenant pour éviter les délais.
+
+2. Marie — Offre Senior à vérifier
+   Texte :
+
+   > Marie peut peut-être bénéficier d’un forfait Navigo Senior ou Améthyste selon sa situation.
+
+3. Information service
+   Texte :
+
+   > Les alertes importantes sont liées au suivi de vos titres et ne sont pas des communications commerciales.
+
+Les alertes doivent s’inspirer de la bannière bleue “Besoin d’Imagine R pour cette année scolaire ?” visible sur les screens IDFM, mais être plus personnalisées et utiles.
+
+Statuts visuels :
+
+* urgent ;
+* conseil ;
+* information ;
+* succès.
+
+Utiliser les tokens couleurs existants :
+
+* bleu pour info ;
+* orange pour attention ;
+* vert pour succès ;
+* rouge uniquement pour erreur ou blocage.
+
+### Section 4 — Profils du foyer
+
+Afficher des cartes de profils.
+
+Chaque carte doit contenir :
+
+* nom ;
+* relation avec le gestionnaire ;
+* type de cible ;
+* titre actuel ou titre recommandé ;
+* statut ;
+* prochaine action ;
+* bouton principal ;
+* bouton secondaire.
+
+Exemple carte jeune :
+
+Nom :
+
+> Lucas Martin
+
+Badge :
+
+> Enfant / Jeune
+
+Titre :
+
+> Imagine R Scolaire
+
+Statut :
+
+> À renouveler avant la rentrée
+
+Action principale :
+
+> Renouveler
+
+Action secondaire :
+
+> Voir le dossier
+
+Autres infos :
+
+> Porteur du titre
+> Payeur : Sophie Martin
+
+Exemple carte retraité :
+
+Nom :
+
+> Marie Dupont
+
+Badge :
+
+> Retraitée / Senior
+
+Titre :
+
+> Offre à vérifier
+
+Statut :
+
+> Éligibilité à confirmer
+
+Action principale :
+
+> Vérifier l’offre adaptée
+
+Action secondaire :
+
+> Voir le profil
+
+Autres infos :
+
+> Profil accompagné par Sophie
+> Parcours accessible renforcé
+
+Exemple carte gestionnaire :
+
+Nom :
+
+> Sophie Martin
+
+Badge :
+
+> Gestionnaire du foyer
+
+Titre :
+
+> Navigo Annuel
+
+Statut :
+
+> Actif
+
+Action principale :
+
+> Voir mon titre
+
+Action secondaire :
+
+> Attestation employeur
+
+Cette carte peut être plus simple si on veut garder le focus sur jeune/retraité.
+
+### Section 5 — Ajouter un profil
+
+Ajouter une carte :
+
+> Ajouter un profil au foyer
+
+Afficher plusieurs options :
+
+* Enfant / jeune
+* Retraité / senior
+* Conjoint
+* Proche aidé
+* Étudiant
+* Bénéficiaire d’une réduction
+
+Pour le MVP :
+
+* Enfant / jeune peut être actif ou déjà couvert.
+* Retraité / senior peut être actif.
+* Les autres options peuvent afficher “Bientôt disponible” ou une modale informative.
+
+Il faut que l’utilisateur comprenne que le produit est pensé pour gérer toutes les cibles, même si le MVP ne les développe pas encore totalement.
+
+### Section 6 — Actions rapides
+
+Créer des actions rapides accessibles depuis le dashboard.
+
+Actions souhaitées :
+
+1. Renouveler un titre
+2. Déclarer une carte perdue
+3. Déclarer un passe trouvé
+4. Vérifier une offre adaptée
+5. Voir mes justificatifs
+6. Contacter le support
+
+Pour le MVP, rendre vraiment visibles et utiles :
+
+* Renouveler un titre
+* Déclarer une carte perdue
+* Déclarer un passe trouvé
+* Vérifier une offre adaptée
+
+Si les routes n’existent pas encore, créer des pages placeholder propres ou des modales simples.
+
+### Section 7 — Aide et contacts
+
+S’inspirer du bloc “Aide et contacts” des screens IDFM.
+
+Afficher des questions utiles liées à notre cible :
+
+* Comment renouveler un forfait Imagine R ?
+* Que faire si j’ai perdu un passe Navigo ?
+* Comment savoir si une personne âgée peut bénéficier d’une offre adaptée ?
+* Quels justificatifs préparer pour un enfant scolarisé ?
+* Comment fonctionne le rôle porteur/payeur ?
+
+Bouton :
+
+> Voir toutes les questions
+
+Pour le MVP, ce bouton peut être un placeholder propre.
+
+### Section 8 — Activité récente
+
+Afficher une section “Activité récente”.
+
+Exemples :
+
+* Espace famille créé.
+* Lucas ajouté comme profil enfant.
+* Rôle payeur confirmé pour Sophie.
+* Renouvellement Imagine R recommandé.
+* Offre Senior suggérée pour Marie.
+
+Cette section donne une impression de suivi et prépare le futur back-office.
+
+## 10. Parcours jeune à prévoir depuis le dashboard
+
+Pour Lucas, prévoir au minimum une route ou une modale :
+
+`/dashboard/family/members/[id]`
+
+Ou si c’est trop tôt, un état de détail dans la même page.
+
+Contenu attendu du profil jeune :
+
+* identité ;
+* relation : enfant / jeune ;
+* statut : porteur ;
+* payeur : Sophie ;
+* titre recommandé : Imagine R Scolaire ;
+* renouvellement conseillé ;
+* documents attendus :
+
+  * photo ;
+  * certificat scolaire ;
+  * pièce d’identité éventuellement ;
+* bouton :
+
+  * “Commencer le renouvellement”
+  * “Voir les justificatifs”
+  * “Déclarer une perte”
+
+Pour le MVP, il est acceptable que le renouvellement soit une page placeholder propre, mais il faut que l’action soit crédible.
+
+## 11. Parcours retraité à prévoir depuis le dashboard
+
+Pour Marie, prévoir un détail simple :
+
+* identité ;
+* relation : parent âgé / retraitée ;
+* statut : profil accompagné ;
+* offre à vérifier :
+
+  * Navigo Senior ;
+  * Améthyste selon département et situation ;
+* mise en avant accessibilité :
+
+  * textes plus lisibles ;
+  * possibilité d’être accompagné par le gestionnaire ;
+* bouton :
+
+  * “Vérifier l’offre adaptée”
+  * “Préparer les justificatifs”
+  * “Demander de l’aide”
+
+Pour le MVP, l’écran peut être plus simple que celui du jeune, mais il doit montrer que le compte famille ne se limite pas aux enfants.
+
+## 12. Fonctionnalité perte / passe trouvé
+
+Nous voulons intégrer l’idée suivante dans le dashboard :
+
+* un membre peut déclarer la perte d’un passe Navigo ;
+* une personne externe peut déclarer avoir trouvé un passe ;
+* le propriétaire ne doit jamais être exposé publiquement ;
+* le back-office pourra ensuite rapprocher le signalement.
+
+Pour cette tâche dashboard, il faut au minimum :
+
+### Déclarer une carte perdue
+
+Depuis une action rapide ou une carte profil :
+
+* afficher une modale de confirmation ;
+* demander pour quel profil ;
+* afficher un message de double confirmation :
+
+  > Cette action peut bloquer le support actuel. Confirmez-vous la déclaration de perte ?
+* créer un état mocké :
+
+  > Demande de remplacement créée.
+
+### Déclarer un passe trouvé
+
+Créer une action rapide :
+
+> J’ai trouvé un passe Navigo
+
+Elle peut ouvrir une modale ou une page placeholder avec :
+
+* numéro du passe ;
+* lieu où il a été trouvé ;
+* option : “Je l’ai déposé à un guichet”
+* bouton : “Signaler le passe trouvé”
+
+Ne jamais afficher l’identité du propriétaire.
+
+Si le backend n’est pas prêt, stocker l’action en mock local proprement, mais prévoir une structure de service API.
+
+## 13. Backend attendu pour le dashboard
+
+Avant de créer de nouveaux modèles, inspecte ce qui existe déjà.
+
+Si le backend contient déjà :
+
+* `User`
+* `Household`
+* `HouseholdMember`
+* `Consent`
+
+Réutilise-les.
+
+Ajouter seulement ce qui est nécessaire pour le dashboard MVP.
+
+Modèles possibles, si absents :
+
+### Subscription
+
+Représente un titre ou une recommandation associée à un profil.
+
+Champs possibles :
+
+* id
+* householdMemberId
+* productName
+* productType
+* status
+* nextAction
+* renewalDate
+* createdAt
+* updatedAt
+
+Types possibles :
+
+* NAVIGO_ANNUAL
+* IMAGINE_R
+* NAVIGO_JUNIOR
+* NAVIGO_SENIOR
+* AMETHYSTE
+* TST
+* UNKNOWN
+
+Statuts possibles :
+
+* ACTIVE
+* TO_RENEW
+* RECOMMENDED
+* PENDING_DOCUMENT
+* BLOCKED
+* LOST
+* EXPIRED
+
+### FamilyNotification
+
+Ou Notification si un modèle existe déjà.
+
+Champs possibles :
+
+* id
+* householdId
+* memberId optional
+* type
+* title
+* message
+* severity
+* read
+* createdAt
+
+### SupportCase
+
+Pour perte ou passe trouvé.
+
+Champs possibles :
+
+* id
+* householdId optional
+* memberId optional
+* type
+* status
+* description
+* passNumberMasked optional
+* foundLocation optional
+* createdAt
+* updatedAt
+
+Types possibles :
+
+* LOST_PASS
+* FOUND_PASS
+* DOCUMENT_REJECTED
+* PAYMENT_BLOCKED
+
+Statuts possibles :
+
+* OPEN
+* IN_PROGRESS
+* RESOLVED
+
+Si ajouter ces modèles prend trop de temps ou risque de casser le projet, créer une couche mock propre côté backend ou frontend, mais prépare les types et services.
+
+## 14. Endpoints souhaités
+
+Créer ou utiliser les endpoints suivants selon l’état du projet.
+
+### Dashboard famille
+
+GET `/api/households/me/dashboard`
+
+Retour attendu :
+
+{
+"household": {
+"id": "...",
+"name": "Famille Martin"
+},
+"manager": {
+"id": "...",
+"firstName": "Sophie",
+"lastName": "Martin"
+},
+"summary": {
+"membersCount": 3,
+"urgentActionsCount": 1,
+"renewalsCount": 1
+},
+"members": [
+{
+"id": "1",
+"firstName": "Sophie",
+"lastName": "Martin",
+"relationship": "SELF",
+"profileType": "MANAGER",
+"currentProduct": "Navigo Annuel",
+"status": "ACTIVE",
+"nextAction": "Voir mon titre",
+"isPayer": true,
+"isHolder": true
+},
+{
+"id": "2",
+"firstName": "Lucas",
+"lastName": "Martin",
+"relationship": "CHILD",
+"profileType": "YOUNG",
+"currentProduct": "Imagine R Scolaire",
+"status": "TO_RENEW",
+"nextAction": "Renouveler avant la rentrée",
+"payerName": "Sophie Martin",
+"isHolder": true
+},
+{
+"id": "3",
+"firstName": "Marie",
+"lastName": "Dupont",
+"relationship": "SENIOR_PARENT",
+"profileType": "SENIOR",
+"currentProduct": null,
+"recommendedProduct": "Navigo Senior ou Améthyste",
+"status": "RECOMMENDED",
+"nextAction": "Vérifier l’offre adaptée"
+}
+],
+"notifications": [
+{
+"id": "notif-1",
+"type": "RENEWAL",
+"severity": "WARNING",
+"title": "Renouvellement Imagine R conseillé",
+"message": "Les demandes sont nombreuses avant la rentrée. Renouvelez dès maintenant pour éviter les délais.",
+"memberId": "2"
+}
+],
+"recentActivity": [
+{
+"id": "activity-1",
+"label": "Lucas a été ajouté comme profil enfant.",
+"createdAt": "..."
+}
+]
+}
+
+### Détail membre
+
+GET `/api/households/me/members/:id`
+
+Retourner le détail d’un profil.
+
+### Déclarer perte
+
+POST `/api/support-cases/lost-pass`
+
+Payload :
+
+{
+"memberId": "...",
+"reason": "Carte perdue dans les transports"
+}
+
+### Déclarer passe trouvé
+
+POST `/api/support-cases/found-pass`
+
+Payload :
+
+{
+"passNumber": "123456789",
+"foundLocation": "Gare de Lyon",
+"depositedAtDesk": true
+}
+
+Le retour ne doit jamais exposer l’identité du propriétaire.
+
+## 15. Fallback demo si backend incomplet
+
+Si l’API n’est pas prête ou si cela prend trop de temps, créer un fichier :
+
+`frontend/lib/demo/familyDashboardMock.ts`
+
+Avec des données propres :
+
+* Sophie Martin : gestionnaire
+* Lucas Martin : jeune / Imagine R à renouveler
+* Marie Dupont : retraitée / offre Senior à vérifier
+
+Mais structure le code pour utiliser l’API en priorité :
+
+1. essayer `GET /api/households/me/dashboard`
+2. si erreur ou pas d’auth, utiliser le mock pour la démo
+
+Ne bloque pas l’avancement à cause du backend.
+
+## 16. Composants frontend à créer ou réutiliser
+
+Réutilise d’abord les composants du register.
+
+Composants attendus, en adaptant à l’existant :
+
+### Atoms
+
+* Button
+* Badge
+* IconPlaceholder
+* FormError
+
+### Molecules
+
+* ProfileSummaryCard
+* AlertCard
+* QuickActionCard
+* EmptyState
+* StatusBadge
+* InfoBox
+* DashboardTab
+
+### Organisms
+
+* FamilyDashboardHeader
+* FamilyDashboardTabs
+* FamilyAlertsSection
+* FamilyMembersSection
+* FamilyQuickActions
+* FamilyHelpSection
+* FamilyRecentActivity
+* LostPassModal
+* FoundPassModal
+* AddMemberPanel ou AddMemberModal
+
+### Templates
+
+* AppShell ou DashboardLayout
+
+Si `AuthLayout` existe déjà, ne l’utilise pas forcément pour le dashboard. Le dashboard doit plutôt avoir un layout applicatif avec navigation simple.
+
+Créer un layout dashboard réutilisable pour les futures pages :
+
+* header ;
+* contenu principal ;
+* navigation mobile éventuellement ;
+* espace utilisateur.
+
+## 17. Design attendu
+
+Le dashboard doit prolonger le design du register et s’inspirer des screens IDF Mobilités actuels.
+
+Il doit utiliser :
+
+* les mêmes tokens Tailwind ;
+* les mêmes boutons ;
+* les mêmes inputs ;
+* les mêmes cards ;
+* la même logique de spacing ;
+* les mêmes couleurs de statut ;
+* les mêmes arrondis ;
+* les mêmes patterns d’accessibilité.
+
+L’objectif est que le register et le dashboard semblent appartenir au même produit.
+
+Style souhaité :
+
+* institutionnel mais moderne ;
+* clair ;
+* rassurant ;
+* beaucoup d’air ;
+* cards blanches sur fond très clair ;
+* accents bleus IDFM ;
+* alertes orange pour les actions importantes ;
+* vert pour les statuts actifs ;
+* rouge seulement pour blocage/perte grave ;
+* textes simples.
+
+Ne pas faire un dashboard trop “SaaS startup” déconnecté du service public. Il faut rester crédible pour Comutitres / IDFM.
+
+## 18. Mobile-first
+
+Sur mobile :
+
+* header compact ;
+* alertes visibles en haut ;
+* cartes profils verticales ;
+* actions rapides en grille 2 colonnes ou liste ;
+* boutons pleine largeur ;
+* pas de tableau large ;
+* pas de menu complexe ;
+* modales lisibles.
+
+Sur desktop :
+
+* layout plus large ;
+* possibilité de grille 2 colonnes ;
+* alertes et actions rapides à droite si pertinent.
+
+## 19. Accessibilité
+
+Respecter :
+
+* contrastes suffisants ;
+* focus visible ;
+* aria-label sur boutons iconiques ;
+* modales accessibles ;
+* boutons clairs ;
+* texte non uniquement dépendant de la couleur ;
+* labels explicites ;
+* langage simple.
+
+Pour le profil senior, prévoir une interface particulièrement lisible :
+
+* texte clair ;
+* boutons faciles à comprendre ;
+* explications courtes ;
+* éviter le jargon.
+
+## 20. RGPD / sécurité
+
+Ne jamais afficher plus de données personnelles que nécessaire sur le dashboard.
+
+Exemples :
+
+* ne pas afficher de numéro de passe complet ;
+* masquer les numéros sensibles ;
+* ne pas afficher l’identité d’un propriétaire lors d’un passe trouvé ;
+* ne pas exposer d’informations sensibles dans les mocks ;
+* ne pas demander la civilité ;
+* éviter les champs de genre ;
+* garder une logique de minimisation.
+
+## 21. Données de démo souhaitées
+
+Créer des données cohérentes :
+
+### Gestionnaire
+
+Sophie Martin
+
+* relation : SELF
+* rôle : gestionnaire du foyer
+* payeur principal
+* titre : Navigo Annuel
+* statut : actif
+
+### Jeune
+
+Lucas Martin
+
+* relation : enfant
+* profil : jeune
+* titre : Imagine R Scolaire
+* statut : à renouveler
+* prochaine action : renouveler avant la rentrée
+* porteur : oui
+* payeur : Sophie Martin
+* documents attendus : photo, certificat scolaire
+
+### Retraitée
+
+Marie Dupont
+
+* relation : parent âgé
+* profil : senior / retraité
+* titre : à déterminer
+* recommandation : Navigo Senior ou Améthyste
+* statut : offre à vérifier
+* accompagnée par : Sophie Martin
+
+### Notification importante
+
+Titre :
+
+> Renouvellement Imagine R conseillé
+
+Message :
+
+> Les demandes sont nombreuses avant la rentrée. Renouvelez dès maintenant pour éviter les délais.
+
+### Notification senior
+
+Titre :
+
+> Une offre Senior peut être disponible
+
+Message :
+
+> Marie peut vérifier son éligibilité à un forfait adapté à sa situation.
+
+## 22. Pages éventuellement à créer
+
+Créer seulement si cela aide le MVP :
+
+* `/dashboard/family`
+* `/dashboard/family/members/[id]`
+* `/dashboard/family/renewal/[memberId]` placeholder propre
+* `/dashboard/family/support/lost-pass` ou modale
+* `/found-pass` si tu préfères une route publique plutôt qu’une modale
+
+Mais ne disperse pas trop le code. La page principale `/dashboard/family` est prioritaire.
+
+## 23. Ce qu’il ne faut pas faire
+
+Ne développe pas maintenant :
+
+* vrai paiement ;
+* vrai upload document complet ;
+* vraie API FranceConnect ;
+* vraie API CAF ;
+* vraie API Améthyste ;
+* vrai envoi d’email ;
+* vrai SMS ;
+* vraie logique complète de renouvellement ;
+* vrai back-office complet ;
+* gestion complète de toutes les cibles.
+
+Ne code pas un énorme système générique qui risque de ne pas être fini.
+
+On veut un MVP visible et cohérent.
+
+## 24. Qualité attendue
+
+Le résultat doit être prêt pour une démo hackathon.
+
+Il doit :
+
+* fonctionner ;
+* être beau ;
+* être fluide ;
+* être cohérent avec le register ;
+* s’inspirer de l’existant IDF Mobilités sans le copier ;
+* utiliser les composants existants ;
+* montrer la valeur du compte famille ;
+* montrer jeune + retraité ;
+* montrer l’extensibilité aux autres profils ;
+* préparer les futurs parcours renouvellement, SAV et back-office.
+
+## 25. Ordre de travail attendu
+
+1. Inspecter l’existant.
+2. Regarder les screens IDF Mobilités joints pour comprendre la structure actuelle du dashboard.
+3. Identifier les composants déjà disponibles.
+4. Réutiliser les composants du register.
+5. Ajouter uniquement les composants manquants.
+6. Créer ou adapter les types TypeScript.
+7. Créer un mock propre si l’API n’est pas prête.
+8. Créer `/dashboard/family`.
+9. Ajouter les sections :
+
+   * header ;
+   * navigation interne inspirée des onglets IDFM ;
+   * alertes ;
+   * profils ;
+   * ajouter un profil ;
+   * actions rapides ;
+   * aide et contacts ;
+   * activité récente.
+10. Ajouter modale perte de carte.
+11. Ajouter modale passe trouvé ou page placeholder.
+12. Brancher API si possible.
+13. Prévoir fallback demo.
+14. Vérifier responsive.
+15. Vérifier build.
+16. Fournir un résumé des fichiers modifiés et des commandes à lancer.
+
+## 26. Résultat attendu
+
+À la fin, nous devons avoir un dashboard famille qui raconte immédiatement notre proposition de valeur :
+
+> Une personne peut gérer les titres de transport de toute sa famille depuis un seul espace, avec des profils adaptés selon l’âge et la situation : jeune à renouveler avant la rentrée, retraité à accompagner vers une offre senior, et à terme conjoint, proche aidé, étudiant ou bénéficiaire d’une réduction.
+
+Le dashboard doit donner envie de continuer le produit et servir de base au reste de l’application.
