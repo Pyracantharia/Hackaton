@@ -14,7 +14,7 @@ ENV PATH="${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tool
 
 # 1. Installer Node.js dans l'environnement Android
 USER root
-RUN apt-get update && apt-get install -y curl unzip \
+RUN apt-get update && apt-get install -y curl imagemagick unzip \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
@@ -44,6 +44,9 @@ RUN echo '{\n  "appId": "com.rapycan.hackaton",\n  "appName": "IDF Mobilités",\
 # 6. Créer le projet Android natif s'il n'existe pas encore, puis synchroniser les assets web
 RUN if [ ! -f android/gradlew ]; then rm -rf android && npx --no-install cap add android; fi \
     && npx --no-install cap sync android
+
+# 6bis. Générer les ressources d'icône Android à partir de assets/icon.png
+RUN ./scripts/generate-android-icons.sh
 
 # 7. Lancer la compilation de l'APK via Gradle
 WORKDIR /app/android
