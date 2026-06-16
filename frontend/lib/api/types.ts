@@ -58,3 +58,19 @@ export type RegisterFamilyResponse = {
     email: string;
   };
 };
+
+export type LoginPayload = {
+  email: string;
+  password: string;
+};
+
+export type LoginResponse = {
+  accessToken: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: "USER" | "EMPLOYEE" | "ADMIN";
+  };
+};

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, startTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/atoms/Button";
 import { InfoBox } from "@/components/molecules/InfoBox";
 import { ProfileSummaryCard } from "@/components/molecules/ProfileSummaryCard";
+import { getMyHousehold } from "@/lib/api/households";
 import type { RegisterFamilyResponse } from "@/lib/api/types";
 
 const fallback: RegisterFamilyResponse = {
@@ -47,7 +48,7 @@ const fallback: RegisterFamilyResponse = {
 };
 
 export default function FamilyDashboardPage() {
-  const [data] = useState<RegisterFamilyResponse>(() => {
+  const [data, setData] = useState<RegisterFamilyResponse>(() => {
     if (typeof window === "undefined") return fallback;
 
     const stored = sessionStorage.getItem("familyRegisterResult");
@@ -59,6 +60,35 @@ export default function FamilyDashboardPage() {
       return fallback;
     }
   });
+
+  useEffect(() => {
+    const accessToken = localStorage.getItem("familyAccessToken");
+    const storedUser = sessionStorage.getItem("familyUser");
+    if (!accessToken) return;
+
+    void getMyHousehold(accessToken)
+      .then((household) => {
+        const user = storedUser ? JSON.parse(storedUser) : fallback.user;
+        startTransition(() => {
+          setData({
+            accessToken,
+            household: {
+              id: household.id,
+              name: household.name,
+            },
+            members: household.members,
+            nextAction: {
+              type: "RECOMMEND_PRODUCT",
+              label: `Voir le forfait recommandé pour ${
+                household.members.find((member) => member.relationship === "CHILD")?.firstName ?? "Lucas"
+              }`,
+            },
+            user,
+          });
+        });
+      })
+      .catch(() => undefined);
+  }, []);
 
   const parent = data.members.find((member) => member.relationship === "SELF") ?? fallback.members[0];
   const child = data.members.find((member) => member.relationship === "CHILD") ?? fallback.members[1];

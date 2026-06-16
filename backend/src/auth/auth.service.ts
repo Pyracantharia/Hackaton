@@ -1,5 +1,6 @@
-import { BadRequestException, HttpException, Injectable, InternalServerErrorException } from "@nestjs/common";
+import { BadRequestException, HttpException, Injectable, InternalServerErrorException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
+import { LoginDto } from "./dtos/login.dto";
 import { RegisterUserDto } from "./dtos/register-user.dto";
 import { RegisterFamilyDto } from "./dtos/register-family.dto";
 import { PrismaService } from "src/prisma/prisma.service";
@@ -11,6 +12,43 @@ export class AuthService {
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService
   ){}
+
+  private async signAccessToken(user: { id: string; email: string; role: string }) {
+    return this.jwtService.signAsync({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    });
+  }
+
+  async login(data: LoginDto) {
+    const user = await this.prismaService.user.findUnique({
+      where: { email: data.email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("Adresse e-mail ou mot de passe incorrect.");
+    }
+
+    const passwordMatches = await argon2.verify(user.passwordHash, data.password);
+
+    if (!passwordMatches) {
+      throw new UnauthorizedException("Adresse e-mail ou mot de passe incorrect.");
+    }
+
+    const accessToken = await this.signAccessToken(user);
+
+    return {
+      accessToken,
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+      },
+    };
+  }
 
   async registerUser(data: RegisterUserDto) {
    try {
@@ -146,11 +184,7 @@ export class AuthService {
         return { user, household, members: [parentMember, childMember] };
       });
 
-      const accessToken = await this.jwtService.signAsync({
-        sub: result.user.id,
-        email: result.user.email,
-        role: result.user.role,
-      });
+      const accessToken = await this.signAccessToken(result.user);
 
       return {
         user: {
