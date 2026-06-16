@@ -18,6 +18,13 @@ enum HouseholdRelationship {
   RELATIVE
 }
 
+enum HouseholdProfileType {
+  MANAGER
+  YOUNG
+  SENIOR
+  OTHER
+}
+
 enum SchoolLevel {
   PRIMARY
   COLLEGE
@@ -30,6 +37,53 @@ enum ConsentType {
   SERVICE_ALERTS
   MOBILITY_NEWS
   PARTNER_OFFERS
+}
+
+enum SubscriptionProductType {
+  NAVIGO_ANNUAL
+  IMAGINE_R
+  NAVIGO_JUNIOR
+  NAVIGO_SENIOR
+  AMETHYSTE
+  TST
+  UNKNOWN
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TO_RENEW
+  RECOMMENDED
+  PENDING_DOCUMENT
+  BLOCKED
+  LOST
+  EXPIRED
+}
+
+enum FamilyNotificationType {
+  RENEWAL
+  OFFER_RECOMMENDATION
+  SERVICE_INFO
+  SUPPORT_UPDATE
+}
+
+enum FamilyNotificationSeverity {
+  INFO
+  WARNING
+  SUCCESS
+  DANGER
+}
+
+enum SupportCaseType {
+  LOST_PASS
+  FOUND_PASS
+  DOCUMENT_REJECTED
+  PAYMENT_BLOCKED
+}
+
+enum SupportCaseStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
 }
 
 model User {
@@ -54,6 +108,8 @@ model Household {
   owner     User              @relation("HouseholdOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   name      String
   members   HouseholdMember[]
+  notifications FamilyNotification[]
+  supportCases  SupportCase[]
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 
@@ -68,11 +124,15 @@ model HouseholdMember {
   lastName              String
   birthDate             DateTime?
   relationship          HouseholdRelationship
+  profileType           HouseholdProfileType @default(OTHER)
   schoolLevel           SchoolLevel?
   department            String?
   isHolder              Boolean               @default(false)
   isPayer               Boolean               @default(false)
   isLegalRepresentative Boolean               @default(false)
+  subscriptions         Subscription[]
+  notifications         FamilyNotification[]
+  supportCases          SupportCase[]
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
@@ -90,4 +150,57 @@ model Consent {
 
   @@unique([userId, type])
   @@index([userId])
+}
+
+model Subscription {
+  id               String                  @id @default(uuid())
+  householdMemberId String
+  householdMember  HouseholdMember         @relation(fields: [householdMemberId], references: [id], onDelete: Cascade)
+  productType      SubscriptionProductType
+  productName      String
+  status           SubscriptionStatus
+  nextActionLabel  String?
+  recommendedProduct String?
+  renewalDate      DateTime?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  @@index([householdMemberId])
+}
+
+model FamilyNotification {
+  id         String                     @id @default(uuid())
+  householdId String
+  household  Household                  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  memberId   String?
+  member     HouseholdMember?           @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  type       FamilyNotificationType
+  title      String
+  message    String
+  severity   FamilyNotificationSeverity
+  read       Boolean                    @default(false)
+  createdAt  DateTime                   @default(now())
+  updatedAt  DateTime                   @updatedAt
+
+  @@index([householdId])
+  @@index([memberId])
+}
+
+model SupportCase {
+  id               String            @id @default(uuid())
+  householdId      String?
+  household        Household?        @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  memberId         String?
+  member           HouseholdMember?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  type             SupportCaseType
+  status           SupportCaseStatus @default(OPEN)
+  description      String?
+  passNumberMasked String?
+  foundLocation    String?
+  depositedAtDesk  Boolean?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([householdId])
+  @@index([memberId])
 }

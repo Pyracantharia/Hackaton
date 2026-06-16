@@ -140,6 +140,7 @@ export class AuthService {
             firstName: data.parent.firstName,
             lastName: data.parent.lastName,
             relationship: "SELF",
+            profileType: "MANAGER",
             isHolder: false,
             isPayer: data.roles.parentIsPayer,
             isLegalRepresentative: data.roles.parentIsLegalRepresentative,
@@ -153,11 +154,44 @@ export class AuthService {
             lastName: data.child.lastName,
             birthDate: new Date(data.child.birthDate),
             relationship: "CHILD",
+            profileType: "YOUNG",
             schoolLevel: data.child.schoolLevel,
             department: data.child.department,
             isHolder: true,
             isPayer: false,
             isLegalRepresentative: false,
+          },
+        });
+
+        await tx.subscription.createMany({
+          data: [
+            {
+              householdMemberId: parentMember.id,
+              productType: "NAVIGO_ANNUAL",
+              productName: "Navigo Annuel",
+              status: "ACTIVE",
+              nextActionLabel: "Voir mon titre",
+            },
+            {
+              householdMemberId: childMember.id,
+              productType: "IMAGINE_R",
+              productName: "Imagine R Scolaire",
+              status: "TO_RENEW",
+              nextActionLabel: "Renouveler avant la rentree",
+              renewalDate: new Date(`${new Date().getUTCFullYear()}-08-31T00:00:00.000Z`),
+            },
+          ],
+        });
+
+        await tx.familyNotification.create({
+          data: {
+            householdId: household.id,
+            memberId: childMember.id,
+            type: "RENEWAL",
+            severity: "WARNING",
+            title: `${data.child.firstName} — Renouvellement Imagine R conseille`,
+            message:
+              "Les demandes sont nombreuses avant la rentree. Renouvelez des maintenant pour eviter les delais.",
           },
         });
 

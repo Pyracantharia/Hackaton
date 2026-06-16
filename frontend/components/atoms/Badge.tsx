@@ -2,13 +2,14 @@ import type { ReactNode } from "react";
 
 type BadgeProps = {
   children: ReactNode;
-  tone?: "blue" | "green" | "orange";
+  tone?: "blue" | "green" | "orange" | "red";
 };
 
 const tones = {
   blue: "bg-idfm-medium text-idfm-focus",
   green: "bg-green-50 text-status-success",
   orange: "bg-orange-50 text-status-warning",
+  red: "bg-red-50 text-status-danger",
 };
 
 export function Badge({ children, tone = "blue" }: BadgeProps) {
