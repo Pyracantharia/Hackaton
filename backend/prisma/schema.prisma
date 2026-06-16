@@ -86,6 +86,12 @@ enum SupportCaseStatus {
   RESOLVED
 }
 
+enum MemberDetailActionVariant {
+  PRIMARY
+  SECONDARY
+  GHOST
+}
+
 model User {
   id            String      @id @default(uuid())
   firstName     String      @default("")
@@ -109,6 +115,7 @@ model Household {
   name      String
   members   HouseholdMember[]
   notifications FamilyNotification[]
+  activities    HouseholdActivity[]
   supportCases  SupportCase[]
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
@@ -132,6 +139,8 @@ model HouseholdMember {
   isLegalRepresentative Boolean               @default(false)
   subscriptions         Subscription[]
   notifications         FamilyNotification[]
+  activities            HouseholdActivity[]
+  profileDetail         MemberProfileDetail?
   supportCases          SupportCase[]
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
@@ -184,6 +193,49 @@ model FamilyNotification {
 
   @@index([householdId])
   @@index([memberId])
+}
+
+model HouseholdActivity {
+  id          String           @id @default(uuid())
+  householdId String
+  household   Household        @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  memberId    String?
+  member      HouseholdMember? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  label       String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([householdId])
+  @@index([memberId])
+}
+
+model MemberProfileDetail {
+  id                String               @id @default(uuid())
+  householdMemberId String               @unique
+  householdMember  HouseholdMember      @relation(fields: [householdMemberId], references: [id], onDelete: Cascade)
+  householdRole    String
+  overview         String
+  supportNote      String
+  accessibilityNote String?
+  documents        String[]
+  actions          MemberDetailAction[]
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+}
+
+model MemberDetailAction {
+  id        String                    @id @default(uuid())
+  detailId  String
+  detail    MemberProfileDetail       @relation(fields: [detailId], references: [id], onDelete: Cascade)
+  label     String
+  href      String?
+  action    String?
+  variant   MemberDetailActionVariant
+  order     Int                       @default(0)
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+
+  @@index([detailId])
 }
 
 model SupportCase {

@@ -56,6 +56,9 @@ export class HouseholdsService {
         notifications: {
           orderBy: { createdAt: "desc" },
         },
+        activities: {
+          orderBy: { createdAt: "desc" },
+        },
         supportCases: {
           orderBy: { createdAt: "desc" },
         },
@@ -67,6 +70,13 @@ export class HouseholdsService {
             },
             subscriptions: {
               orderBy: { updatedAt: "desc" },
+            },
+            profileDetail: {
+              include: {
+                actions: {
+                  orderBy: { order: "asc" },
+                },
+              },
             },
             supportCases: {
               orderBy: { createdAt: "desc" },
@@ -189,9 +199,8 @@ export class HouseholdsService {
 
   private buildNotifications(
     household: Awaited<ReturnType<HouseholdsService["findHouseholdRecordForUser"]>>,
-    members: DashboardMember[],
   ): DashboardNotification[] {
-    const mappedNotifications = household.notifications.map((notification) => ({
+    return household.notifications.map((notification) => ({
       id: notification.id,
       type: notification.type,
       severity: notification.severity,
@@ -200,160 +209,57 @@ export class HouseholdsService {
       memberId: notification.memberId,
       createdAt: notification.createdAt.toISOString(),
     }));
-
-    const childMember = members.find((member) => member.profileType === "YOUNG");
-    const hasRenewalNotification = mappedNotifications.some((notification) => notification.type === "RENEWAL");
-    if (childMember && !hasRenewalNotification) {
-      mappedNotifications.unshift({
-        id: "synthetic-renewal",
-        type: "RENEWAL",
-        severity: "WARNING",
-        title: `${childMember.firstName} — Renouvellement Imagine R conseillé`,
-        message:
-          "Les demandes sont nombreuses avant la rentrée. Renouvelez dès maintenant pour éviter les délais.",
-        memberId: childMember.id,
-        createdAt: new Date().toISOString(),
-      });
-    }
-
-    mappedNotifications.push({
-      id: "synthetic-service-info",
-      type: "SERVICE_INFO",
-      severity: "INFO",
-      title: "Information service",
-      message:
-        "Les alertes importantes sont liées au suivi de vos titres et ne sont pas des communications commerciales.",
-      memberId: null,
-      createdAt: new Date().toISOString(),
-    });
-
-    return mappedNotifications;
   }
 
   private buildRecentActivity(
     household: Awaited<ReturnType<HouseholdsService["findHouseholdRecordForUser"]>>,
-    members: DashboardMember[],
   ): DashboardActivity[] {
-    const manager = members.find((member) => member.profileType === "MANAGER");
-    const youngMember = members.find((member) => member.profileType === "YOUNG");
-    const activities: DashboardActivity[] = [
-      {
-        id: "activity-household-created",
-        label: "Espace famille créé.",
-        createdAt: household.createdAt.toISOString(),
-      },
-    ];
-
-    for (const member of household.members) {
-      if (member.relationship === "CHILD") {
-        activities.push({
-          id: `activity-member-${member.id}`,
-          label: `${member.firstName} a été ajouté comme profil enfant.`,
-          createdAt: member.createdAt.toISOString(),
-        });
-      }
-    }
-
-    if (manager?.isPayer) {
-      activities.push({
-        id: "activity-payer-confirmed",
-        label: `Role payeur confirme pour ${manager.firstName}.`,
-        createdAt: household.updatedAt.toISOString(),
-      });
-    }
-
-    if (youngMember) {
-      activities.push({
-        id: "activity-young-recommendation",
-        label: `Renouvellement Imagine R recommande pour ${youngMember.firstName}.`,
-        createdAt: household.updatedAt.toISOString(),
-      });
-    }
-
-    for (const supportCase of household.supportCases.slice(0, 3)) {
-      activities.push({
-        id: `activity-support-${supportCase.id}`,
-        label:
-          supportCase.type === "LOST_PASS"
-            ? "Une déclaration de passe perdu a été enregistrée."
-            : "Un passe trouvé a été signalé.",
-        createdAt: supportCase.createdAt.toISOString(),
-      });
-    }
-
-    return activities
-      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+    return household.activities
+      .map((activity) => ({
+        id: activity.id,
+        label: activity.label,
+        createdAt: activity.createdAt.toISOString(),
+      }))
       .slice(0, 6);
   }
 
-  private buildMemberDetail(member: DashboardMember, managerName: string) {
-    if (member.profileType === "YOUNG") {
-      return {
-        householdRole: "Porteur du titre",
-        overview: "Lucas peut être renouvelé dès maintenant pour anticiper la rentrée scolaire.",
-        supportNote: `Payeur : ${managerName}. Documents attendus : photo récente et certificat scolaire.`,
-        accessibilityNote: null,
-        documents: ["Photo récente", "Certificat scolaire", "Pièce d'identité si demandée"],
-        actions: [
-          {
-            label: "Commencer le renouvellement",
-            href: `/dashboard/family/renewal/${member.id}`,
-            variant: "primary",
-          },
-          {
-            label: "Voir les justificatifs",
-            href: `/dashboard/family/members/${member.id}#documents`,
-            variant: "secondary",
-          },
-        ],
-      };
-    }
+  private formatActionVariant(variant: "PRIMARY" | "SECONDARY" | "GHOST") {
+    return variant.toLowerCase() as "primary" | "secondary" | "ghost";
+  }
 
-    if (member.profileType === "SENIOR") {
+  private buildMemberDetail(
+    member: DashboardMember,
+    detail: Awaited<ReturnType<HouseholdsService["findHouseholdRecordForUser"]>>["members"][number]["profileDetail"],
+  ) {
+    if (!detail) {
       return {
-        householdRole: "Profil accompagné",
-        overview: "Ce profil peut etre oriente vers une offre senior adaptee selon sa situation.",
-        supportNote: `Profil accompagné par ${managerName}. Ce parcours doit rester lisible et rassurant.`,
-        accessibilityNote: "Parcours renforcé avec textes simples et actions claires.",
-        documents: ["Justificatif de domicile", "Document d'éligibilité éventuel", "Pièce d'identité"],
+        householdRole: member.relationLabel,
+        overview: "Les informations detaillees de ce profil seront completees prochainement.",
+        supportNote: member.payerName ? `Payeur : ${member.payerName}.` : "Aucun payeur rattache.",
+        accessibilityNote: null,
+        documents: [],
         actions: [
           {
-            label: "Vérifier l'offre adaptée",
-            href: `/dashboard/family/members/${member.id}#eligibilite`,
-            variant: "primary",
-          },
-          {
-            label: "Préparer les justificatifs",
-            href: `/dashboard/family/members/${member.id}#documents`,
-            variant: "secondary",
-          },
-          {
-            label: "Demander de l'aide",
-            href: "/dashboard/family?tab=help",
-            variant: "ghost",
+            label: "Retour au foyer",
+            href: "/dashboard/family",
+            variant: "secondary" as const,
           },
         ],
       };
     }
 
     return {
-      householdRole: "Gestionnaire du foyer",
-      overview: "Votre espace centralise les profils, les paiements et les prochaines actions du foyer.",
-      supportNote: "Vous êtes le point d'entrée principal pour le suivi des dossiers et des alertes.",
-      accessibilityNote: null,
-      documents: ["Attestation employeur", "RIB si nécessaire"],
-      actions: [
-        {
-          label: "Voir mon titre",
-          href: "/dashboard/family?tab=profiles",
-          variant: "primary",
-        },
-        {
-          label: "Attestation employeur",
-          href: "/dashboard/family",
-          variant: "secondary",
-        },
-      ],
+      householdRole: detail.householdRole,
+      overview: detail.overview,
+      supportNote: detail.supportNote,
+      accessibilityNote: detail.accessibilityNote,
+      documents: detail.documents,
+      actions: detail.actions.map((action) => ({
+        label: action.label,
+        href: action.href,
+        action: action.action as "lost-pass" | undefined,
+        variant: this.formatActionVariant(action.variant),
+      })),
     };
   }
 
@@ -371,8 +277,8 @@ export class HouseholdsService {
     const household = await this.findHouseholdRecordForUser(userId);
     const managerName = `${household.owner.firstName} ${household.owner.lastName}`.trim();
     const members = household.members.map((member) => this.buildMemberView(member, managerName));
-    const notifications = this.buildNotifications(household, members);
-    const recentActivity = this.buildRecentActivity(household, members);
+    const notifications = this.buildNotifications(household);
+    const recentActivity = this.buildRecentActivity(household);
 
     return {
       household: {
@@ -397,22 +303,32 @@ export class HouseholdsService {
   }
 
   async getHouseholdMemberDetailForUser(userId: string, memberId: string) {
-    const dashboard = await this.getDashboardForUser(userId);
-    const member = dashboard.members.find((candidate) => candidate.id === memberId);
+    const household = await this.findHouseholdRecordForUser(userId);
+    const managerName = `${household.owner.firstName} ${household.owner.lastName}`.trim();
+    const members = household.members.map((candidate) => this.buildMemberView(candidate, managerName));
+    const notifications = this.buildNotifications(household);
+    const member = members.find((candidate) => candidate.id === memberId);
+    const memberRecord = household.members.find((candidate) => candidate.id === memberId);
 
-    if (!member) {
+    if (!member || !memberRecord) {
       throw new NotFoundException("Aucun profil foyer trouvé pour cet identifiant.");
     }
 
-    const managerName = `${dashboard.manager.firstName} ${dashboard.manager.lastName}`.trim();
-    const detail = this.buildMemberDetail(member, managerName);
+    const detail = this.buildMemberDetail(member, memberRecord.profileDetail);
 
     return {
-      household: dashboard.household,
-      manager: dashboard.manager,
+      household: {
+        id: household.id,
+        name: household.name,
+      },
+      manager: {
+        id: household.owner.id,
+        firstName: household.owner.firstName,
+        lastName: household.owner.lastName,
+      },
       member,
       ...detail,
-      alerts: dashboard.notifications.filter((notification) => notification.memberId === member.id),
+      alerts: notifications.filter((notification) => notification.memberId === member.id || notification.memberId === null),
     };
   }
 }

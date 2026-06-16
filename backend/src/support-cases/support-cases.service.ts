@@ -68,6 +68,14 @@ export class SupportCasesService {
         },
       });
 
+      await tx.householdActivity.create({
+        data: {
+          householdId: household.id,
+          memberId: member.id,
+          label: `${member.firstName} a signale une perte de passe.`,
+        },
+      });
+
       return supportCase;
     });
 

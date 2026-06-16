@@ -10,11 +10,6 @@ import { InfoBox } from "@/components/molecules/InfoBox";
 import { DashboardLayout } from "@/components/templates/DashboardLayout";
 import { createFoundPassSupportCase } from "@/lib/api/households";
 
-function maskPassNumber(passNumber: string) {
-  const sanitized = passNumber.replace(/\s+/g, "");
-  return `${"*".repeat(Math.max(0, sanitized.length - 4))}${sanitized.slice(-4)}`;
-}
-
 export default function FoundPassPage() {
   const [passNumber, setPassNumber] = useState("");
   const [foundLocation, setFoundLocation] = useState("");
@@ -48,11 +43,8 @@ export default function FoundPassPage() {
         message: response.message,
         masked: response.passNumberMasked,
       });
-    } catch {
-      setSuccess({
-        message: "Signalement enregistre en mode demo. Merci pour votre aide.",
-        masked: maskPassNumber(passNumber.trim()),
-      });
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Le signalement n'a pas pu etre enregistre.");
     } finally {
       setIsSubmitting(false);
     }

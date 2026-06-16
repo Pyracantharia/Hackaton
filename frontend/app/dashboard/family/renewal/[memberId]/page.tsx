@@ -1,35 +1,72 @@
 "use client";
 
 import Link from "next/link";
+import { startTransition, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/atoms/Button";
 import { InfoBox } from "@/components/molecules/InfoBox";
 import { DashboardLayout } from "@/components/templates/DashboardLayout";
-import { familyDashboardMock } from "@/lib/demo/familyDashboardMock";
+import { getHouseholdMemberDetail } from "@/lib/api/households";
+import type { MemberDetailResponse } from "@/lib/api/types";
 
 function getStoredUserName() {
   if (typeof window === "undefined") {
-    return familyDashboardMock.manager.firstName;
+    return "Mon espace";
   }
 
   const storedUser = sessionStorage.getItem("familyUser");
 
   if (!storedUser) {
-    return familyDashboardMock.manager.firstName;
+    return "Mon espace";
   }
 
   try {
     const user = JSON.parse(storedUser) as { firstName?: string };
-    return user.firstName ?? familyDashboardMock.manager.firstName;
+    return user.firstName ?? "Mon espace";
   } catch {
-    return familyDashboardMock.manager.firstName;
+    return "Mon espace";
   }
 }
 
 export default function RenewalPlaceholderPage() {
   const params = useParams<{ memberId: string }>();
-  const memberId = typeof params.memberId === "string" ? params.memberId : "demo-lucas";
-  const member = familyDashboardMock.members.find((candidate) => candidate.id === memberId) ?? familyDashboardMock.members[1];
+  const memberId = typeof params.memberId === "string" ? params.memberId : "";
+  const [detail, setDetail] = useState<MemberDetailResponse | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const accessToken = localStorage.getItem("familyAccessToken");
+
+    if (!accessToken) {
+      setLoadError("Connectez-vous pour charger ce renouvellement.");
+      return;
+    }
+
+    void getHouseholdMemberDetail(accessToken, memberId)
+      .then((response) => startTransition(() => setDetail(response)))
+      .catch((error: Error) => startTransition(() => setLoadError(error.message)));
+  }, [memberId]);
+
+  if (!detail) {
+    return (
+      <DashboardLayout
+        activeTab="titles"
+        breadcrumbs={[
+          { href: "/", label: "Accueil" },
+          { href: "/dashboard/family", label: "Mon foyer Navigo" },
+          { label: "Renouvellement" },
+        ]}
+        subtitle="Un parcours de renouvellement simple, anticipe pour la rentree et prepare les justificatifs utiles."
+        summaryItems={["Chargement du renouvellement"]}
+        title="Renouvellement"
+        userName={getStoredUserName()}
+      >
+        <InfoBox tone={loadError ? "orange" : "blue"}>{loadError ?? "Chargement du renouvellement..."}</InfoBox>
+      </DashboardLayout>
+    );
+  }
+
+  const member = detail.member;
 
   return (
     <DashboardLayout
@@ -42,7 +79,7 @@ export default function RenewalPlaceholderPage() {
       subtitle="Un parcours de renouvellement simple, anticipe pour la rentree et prepare les justificatifs utiles."
       summaryItems={[member.firstName, member.currentProduct ?? "Titre a renouveler"]}
       title={`Renouvellement de ${member.firstName}`}
-      userName={getStoredUserName()}
+      userName={detail.manager.firstName ?? getStoredUserName()}
     >
       <div className="grid gap-6">
         <InfoBox tone="orange">

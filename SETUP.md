@@ -11,9 +11,11 @@
 
 - Lancer la commande `npm install`
 
-- Lancer la commande `npx prisma migrate deploy` (dans le container)
+- Lancer la commande `docker exec -it backend npx prisma migrate deploy`
 
-- Lancer la commande `npx prisma generate`(dans le container) pour générer les nouveaux types des modèle qui seront utilisés par le client Prisma
+- Lancer la commande `docker exec -it backend npx prisma generate` pour générer les nouveaux types des modèle qui seront utilisés par le client Prisma
+
+- Lancer la commande `docker exec -it backend npx prisma db seed`
 
 ### Pour le front
 

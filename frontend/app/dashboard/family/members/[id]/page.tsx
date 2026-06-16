@@ -13,33 +13,33 @@ import {
   createLostPassSupportCase,
   getHouseholdMemberDetail,
 } from "@/lib/api/households";
-import { familyDashboardMock, getDemoMemberDetail } from "@/lib/demo/familyDashboardMock";
 import type { MemberDetailResponse } from "@/lib/api/types";
 
 function getStoredUserName() {
   if (typeof window === "undefined") {
-    return familyDashboardMock.manager.firstName;
+    return "Mon espace";
   }
 
   const storedUser = sessionStorage.getItem("familyUser");
 
   if (!storedUser) {
-    return familyDashboardMock.manager.firstName;
+    return "Mon espace";
   }
 
   try {
     const user = JSON.parse(storedUser) as { firstName?: string };
-    return user.firstName ?? familyDashboardMock.manager.firstName;
+    return user.firstName ?? "Mon espace";
   } catch {
-    return familyDashboardMock.manager.firstName;
+    return "Mon espace";
   }
 }
 
 export default function MemberDetailPage() {
   const params = useParams<{ id: string }>();
-  const memberId = typeof params.id === "string" ? params.id : "demo-lucas";
-  const [detail, setDetail] = useState<MemberDetailResponse>(() => getDemoMemberDetail(memberId));
+  const memberId = typeof params.id === "string" ? params.id : "";
+  const [detail, setDetail] = useState<MemberDetailResponse | null>(null);
   const [flash, setFlash] = useState<{ message: string; tone: "green" | "orange" | "red" } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isLostPassOpen, setIsLostPassOpen] = useState(false);
   const [isSubmittingLostPass, setIsSubmittingLostPass] = useState(false);
 
@@ -47,6 +47,7 @@ export default function MemberDetailPage() {
     const accessToken = localStorage.getItem("familyAccessToken");
 
     if (!accessToken) {
+      setLoadError("Connectez-vous pour charger ce profil.");
       return;
     }
 
@@ -54,40 +55,68 @@ export default function MemberDetailPage() {
       .then((response) => {
         startTransition(() => setDetail(response));
       })
-      .catch(() => {
-        startTransition(() => setDetail(getDemoMemberDetail(memberId)));
+      .catch((error: Error) => {
+        startTransition(() => setLoadError(error.message));
       });
   }, [memberId]);
 
   async function handleLostPassSubmit(payload: { memberId: string; reason: string }) {
     const accessToken = localStorage.getItem("familyAccessToken");
+    if (!detail || !accessToken) {
+      setFlash({ message: "Impossible d'enregistrer la demande sans session active.", tone: "red" });
+      return;
+    }
+
     setIsSubmittingLostPass(true);
 
-    let message = "Demande de remplacement creee en mode demo.";
+    let message = "Demande de remplacement creee.";
 
-    if (accessToken) {
-      try {
-        const response = await createLostPassSupportCase(accessToken, payload);
-        message = response.message;
-      } catch {
-        message = "Demande de remplacement creee en mode demo.";
-      }
+    try {
+      const response = await createLostPassSupportCase(accessToken, payload);
+      message = response.message;
+    } catch {
+      setFlash({ message: "La demande n'a pas pu etre enregistree pour le moment.", tone: "red" });
+      setIsSubmittingLostPass(false);
+      return;
     }
 
     startTransition(() => {
-      setDetail((current) => ({
-        ...current,
-        member: {
-          ...current.member,
-          status: "LOST",
-          nextAction: "Suivre la demande de remplacement",
-        },
-      }));
+      setDetail((current) => (
+        current
+          ? {
+              ...current,
+              member: {
+                ...current.member,
+                status: "LOST",
+                nextAction: "Suivre la demande de remplacement",
+              },
+            }
+          : current
+      ));
       setFlash({ message, tone: "green" });
       setIsLostPassOpen(false);
     });
 
     setIsSubmittingLostPass(false);
+  }
+
+  if (!detail) {
+    return (
+      <DashboardLayout
+        activeTab="profiles"
+        breadcrumbs={[
+          { href: "/", label: "Accueil" },
+          { href: "/dashboard/family", label: "Mon foyer Navigo" },
+          { label: "Profil" },
+        ]}
+        subtitle="Detail du profil, informations utiles, documents attendus et prochaines actions."
+        summaryItems={["Chargement du profil"]}
+        title="Profil foyer"
+        userName={getStoredUserName()}
+      >
+        <InfoBox tone={loadError ? "orange" : "blue"}>{loadError ?? "Chargement du profil..."}</InfoBox>
+      </DashboardLayout>
+    );
   }
 
   return (

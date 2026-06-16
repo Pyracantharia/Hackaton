@@ -15,7 +15,6 @@ import {
   createLostPassSupportCase,
   getMyHouseholdDashboard,
 } from "@/lib/api/households";
-import { familyDashboardMock } from "@/lib/demo/familyDashboardMock";
 import type { HouseholdDashboardResponse } from "@/lib/api/types";
 
 type FlashMessage = {
@@ -40,20 +39,20 @@ function getActiveTab(value: string | null): DashboardTabId {
 
 function getStoredUserName() {
   if (typeof window === "undefined") {
-    return familyDashboardMock.manager.firstName;
+    return "Mon espace";
   }
 
   const storedUser = sessionStorage.getItem("familyUser");
 
   if (!storedUser) {
-    return familyDashboardMock.manager.firstName;
+    return "Mon espace";
   }
 
   try {
     const user = JSON.parse(storedUser) as { firstName?: string };
-    return user.firstName ?? familyDashboardMock.manager.firstName;
+    return user.firstName ?? "Mon espace";
   } catch {
-    return familyDashboardMock.manager.firstName;
+    return "Mon espace";
   }
 }
 
@@ -76,9 +75,9 @@ function FamilyDashboardFallback() {
         { label: "Mon foyer Navigo" },
       ]}
       subtitle="Gerez les titres de votre foyer depuis un seul espace, avec des alertes, des profils et des actions adaptees a chaque situation."
-      summaryItems={buildSummaryItems(familyDashboardMock)}
+      summaryItems={["Chargement du foyer"]}
       title="Mon foyer Navigo"
-      userName={familyDashboardMock.manager.firstName}
+      userName="Mon espace"
     >
       <InfoBox>Chargement du foyer et des prochaines actions...</InfoBox>
     </DashboardLayout>
@@ -87,10 +86,11 @@ function FamilyDashboardFallback() {
 
 function FamilyDashboardPageContent() {
   const searchParams = useSearchParams();
-  const [data, setData] = useState<HouseholdDashboardResponse>(familyDashboardMock);
+  const [data, setData] = useState<HouseholdDashboardResponse | null>(null);
   const [isLoading, setIsLoading] = useState(() => (
     typeof window !== "undefined" ? Boolean(localStorage.getItem("familyAccessToken")) : true
   ));
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [flash, setFlash] = useState<FlashMessage | null>(null);
   const [isLostPassOpen, setIsLostPassOpen] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>(undefined);
@@ -101,6 +101,8 @@ function FamilyDashboardPageContent() {
     const accessToken = localStorage.getItem("familyAccessToken");
 
     if (!accessToken) {
+      setIsLoading(false);
+      setLoadError("Connectez-vous pour charger votre foyer.");
       return;
     }
 
@@ -110,9 +112,9 @@ function FamilyDashboardPageContent() {
           setData(response);
         });
       })
-      .catch(() => {
+      .catch((error: Error) => {
         startTransition(() => {
-          setData((current) => current ?? familyDashboardMock);
+          setLoadError(error.message);
         });
       })
       .finally(() => setIsLoading(false));
@@ -120,42 +122,55 @@ function FamilyDashboardPageContent() {
 
   async function handleLostPassSubmit(payload: { memberId: string; reason: string }) {
     const accessToken = localStorage.getItem("familyAccessToken");
+    if (!data) {
+      return;
+    }
+
+    if (!accessToken) {
+      setFlash({ message: "Impossible d'enregistrer la demande sans session active.", tone: "red" });
+      return;
+    }
+
     setIsSubmittingLostPass(true);
 
-    let message = "Demande de remplacement creee en mode demo.";
+    let message = "Demande de remplacement creee.";
 
-    if (accessToken) {
-      try {
-        const response = await createLostPassSupportCase(accessToken, payload);
-        message = response.message;
-      } catch {
-        message = "Demande de remplacement creee en mode demo.";
-      }
+    try {
+      const response = await createLostPassSupportCase(accessToken, payload);
+      message = response.message;
+    } catch {
+      setFlash({ message: "La demande n'a pas pu etre enregistree pour le moment.", tone: "red" });
+      setIsSubmittingLostPass(false);
+      return;
     }
 
     const targetMember = data.members.find((member) => member.id === payload.memberId);
 
     startTransition(() => {
-      setData((current) => ({
-        ...current,
-        members: current.members.map((member) => (
-          member.id === payload.memberId
-            ? {
-                ...member,
-                status: "LOST",
-                nextAction: "Suivre la demande de remplacement",
-              }
-            : member
-        )),
-        recentActivity: [
-          {
-            id: `activity-lost-pass-${Date.now()}`,
-            label: `${targetMember?.firstName ?? "Le profil"} a signale une perte de passe.`,
-            createdAt: new Date().toISOString(),
-          },
-          ...current.recentActivity,
-        ].slice(0, 6),
-      }));
+      setData((current) => (
+        current
+          ? {
+              ...current,
+              members: current.members.map((member) => (
+                member.id === payload.memberId
+                  ? {
+                      ...member,
+                      status: "LOST",
+                      nextAction: "Suivre la demande de remplacement",
+                    }
+                  : member
+              )),
+              recentActivity: [
+                {
+                  id: `activity-lost-pass-${Date.now()}`,
+                  label: `${targetMember?.firstName ?? "Le profil"} a signale une perte de passe.`,
+                  createdAt: new Date().toISOString(),
+                },
+                ...current.recentActivity,
+              ].slice(0, 6),
+            }
+          : current
+      ));
       setFlash({ message, tone: "green" });
       setIsLostPassOpen(false);
     });
@@ -187,6 +202,10 @@ function FamilyDashboardPageContent() {
   }
 
   function renderActiveSection() {
+    if (!data) {
+      return <InfoBox tone={loadError ? "orange" : "blue"}>{loadError ?? "Chargement du foyer..."}</InfoBox>;
+    }
+
     switch (activeTab) {
       case "profiles":
         return (
@@ -248,9 +267,9 @@ function FamilyDashboardPageContent() {
         { label: "Mon foyer Navigo" },
       ]}
       subtitle="Gerez les titres de votre foyer depuis un seul espace, avec des alertes, des profils et des actions adaptees a chaque situation."
-      summaryItems={buildSummaryItems(data)}
+      summaryItems={data ? buildSummaryItems(data) : ["Chargement du foyer"]}
       title="Mon foyer Navigo"
-      userName={getStoredUserName()}
+      userName={data?.manager.firstName ?? getStoredUserName()}
     >
       <div className="grid gap-8">
         {isLoading ? (
@@ -267,7 +286,7 @@ function FamilyDashboardPageContent() {
           defaultMemberId={selectedMemberId}
           isOpen={isLostPassOpen}
           isSubmitting={isSubmittingLostPass}
-          members={data.members}
+          members={data?.members ?? []}
           onClose={() => setIsLostPassOpen(false)}
           onSubmit={handleLostPassSubmit}
         />

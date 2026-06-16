@@ -195,6 +195,96 @@ export class AuthService {
           },
         });
 
+        await tx.familyNotification.create({
+          data: {
+            householdId: household.id,
+            memberId: null,
+            type: "SERVICE_INFO",
+            severity: "INFO",
+            title: "Information service",
+            message:
+              "Les alertes importantes sont liees au suivi de vos titres et ne sont pas des communications commerciales.",
+          },
+        });
+
+        await tx.householdActivity.createMany({
+          data: [
+            {
+              householdId: household.id,
+              label: "Espace famille cree.",
+            },
+            {
+              householdId: household.id,
+              memberId: childMember.id,
+              label: `${data.child.firstName} a ete ajoute comme profil enfant.`,
+            },
+            {
+              householdId: household.id,
+              memberId: parentMember.id,
+              label: `Role payeur confirme pour ${data.parent.firstName}.`,
+            },
+            {
+              householdId: household.id,
+              memberId: childMember.id,
+              label: `Renouvellement Imagine R recommande pour ${data.child.firstName}.`,
+            },
+          ],
+        });
+
+        await tx.memberProfileDetail.create({
+          data: {
+            householdMemberId: parentMember.id,
+            householdRole: "Gestionnaire du foyer",
+            overview: "Votre espace centralise les profils, les paiements et les prochaines actions du foyer.",
+            supportNote: "Vous etes le point d'entree principal pour le suivi des dossiers et des alertes.",
+            accessibilityNote: null,
+            documents: ["Attestation employeur", "RIB si necessaire"],
+            actions: {
+              create: [
+                {
+                  label: "Voir mon titre",
+                  href: "/dashboard/family?tab=profiles",
+                  variant: "PRIMARY",
+                  order: 1,
+                },
+                {
+                  label: "Attestation employeur",
+                  href: "/dashboard/family",
+                  variant: "SECONDARY",
+                  order: 2,
+                },
+              ],
+            },
+          },
+        });
+
+        await tx.memberProfileDetail.create({
+          data: {
+            householdMemberId: childMember.id,
+            householdRole: "Porteur du titre",
+            overview: `${data.child.firstName} peut etre renouvele des maintenant pour anticiper la rentree scolaire.`,
+            supportNote: `Payeur : ${data.parent.firstName} ${data.parent.lastName}. Documents attendus : photo recente et certificat scolaire.`,
+            accessibilityNote: null,
+            documents: ["Photo recente", "Certificat scolaire", "Piece d'identite si demandee"],
+            actions: {
+              create: [
+                {
+                  label: "Commencer le renouvellement",
+                  href: `/dashboard/family/renewal/${childMember.id}`,
+                  variant: "PRIMARY",
+                  order: 1,
+                },
+                {
+                  label: "Voir les justificatifs",
+                  href: `/dashboard/family/members/${childMember.id}#documents`,
+                  variant: "SECONDARY",
+                  order: 2,
+                },
+              ],
+            },
+          },
+        });
+
         await tx.consent.createMany({
           data: [
             {
