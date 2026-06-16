@@ -9,25 +9,6 @@ import { DashboardLayout } from "@/components/templates/DashboardLayout";
 import { getHouseholdMemberDetail } from "@/lib/api/households";
 import type { MemberDetailResponse } from "@/lib/api/types";
 
-function getStoredUserName() {
-  if (typeof window === "undefined") {
-    return "Mon espace";
-  }
-
-  const storedUser = sessionStorage.getItem("familyUser");
-
-  if (!storedUser) {
-    return "Mon espace";
-  }
-
-  try {
-    const user = JSON.parse(storedUser) as { firstName?: string };
-    return user.firstName ?? "Mon espace";
-  } catch {
-    return "Mon espace";
-  }
-}
-
 export default function RenewalPlaceholderPage() {
   const params = useParams<{ memberId: string }>();
   const memberId = typeof params.memberId === "string" ? params.memberId : "";
@@ -38,7 +19,9 @@ export default function RenewalPlaceholderPage() {
     const accessToken = localStorage.getItem("familyAccessToken");
 
     if (!accessToken) {
-      setLoadError("Connectez-vous pour charger ce renouvellement.");
+      queueMicrotask(() => {
+        setLoadError("Connectez-vous pour charger ce renouvellement.");
+      });
       return;
     }
 
@@ -59,7 +42,7 @@ export default function RenewalPlaceholderPage() {
         subtitle="Un parcours de renouvellement simple, anticipe pour la rentree et prepare les justificatifs utiles."
         summaryItems={["Chargement du renouvellement"]}
         title="Renouvellement"
-        userName={getStoredUserName()}
+        userName="Mon espace"
       >
         <InfoBox tone={loadError ? "orange" : "blue"}>{loadError ?? "Chargement du renouvellement..."}</InfoBox>
       </DashboardLayout>
@@ -79,7 +62,7 @@ export default function RenewalPlaceholderPage() {
       subtitle="Un parcours de renouvellement simple, anticipe pour la rentree et prepare les justificatifs utiles."
       summaryItems={[member.firstName, member.currentProduct ?? "Titre a renouveler"]}
       title={`Renouvellement de ${member.firstName}`}
-      userName={detail.manager.firstName ?? getStoredUserName()}
+      userName={detail.manager.firstName ?? "Mon espace"}
     >
       <div className="grid gap-6">
         <InfoBox tone="orange">

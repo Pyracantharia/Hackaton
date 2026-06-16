@@ -3,6 +3,7 @@ import { Button } from "../atoms/Button";
 import { InfoBox } from "../molecules/InfoBox";
 import { ProfileSummaryCard } from "../molecules/ProfileSummaryCard";
 import type { RegisterResult } from "../register/types";
+import { getProfileVisual } from "@/lib/member-visuals";
 
 type RegisterSuccessStepProps = {
   result: RegisterResult;
@@ -20,11 +21,13 @@ export function RegisterSuccessStep({ result }: RegisterSuccessStepProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <ProfileSummaryCard
           badges={["Compte principal", "Payeur"]}
+          icon={getProfileVisual("MANAGER")}
           name={`${parent?.firstName ?? result.user.firstName} ${parent?.lastName ?? result.user.lastName}`}
           subtitle="Gestionnaire du foyer"
         />
         <ProfileSummaryCard
           badges={["Profil enfant", "Porteur"]}
+          icon={getProfileVisual("YOUNG")}
           name={`${child?.firstName ?? "Lucas"} ${child?.lastName ?? "Martin"}`}
           subtitle="Forfait à recommander"
         />

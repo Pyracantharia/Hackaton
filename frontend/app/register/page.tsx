@@ -167,8 +167,13 @@ export default function RegisterPage() {
           "Choisissez clairement les communications que vous souhaitez recevoir.",
         ][currentStep];
 
+  const illustrationSrc =
+    currentStep === 0 ? "/assets/illustrations/station-waiting-area.png" : "/assets/illustrations/register-family.svg";
+  const illustrationAlt =
+    currentStep === 0 ? "Illustration Île-de-France Mobilités" : "Famille utilisant les transports Île-de-France Mobilités";
+
   return (
-    <AuthLayout title={title} subtitle={subtitle}>
+    <AuthLayout title={title} subtitle={subtitle} illustrationSrc={illustrationSrc} illustrationAlt={illustrationAlt}>
       <section className="rounded-md border border-neutral-light bg-white p-5 shadow-sm sm:p-7">
         {currentStep > 0 && currentStep < 6 ? (
           <div className="mb-6">

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { InfoBox } from "../molecules/InfoBox";
 
 const questions = [
@@ -25,6 +26,18 @@ export function FamilyHelpSection() {
         </div>
 
         <div className="rounded-2xl border border-neutral-light bg-white p-5 shadow-sm">
+          <div className="mb-5 flex items-center gap-4 rounded-2xl bg-idfm-light p-4">
+            <Image
+              src="/assets/illustrations/station-agent-standing.png"
+              alt="Agent Île-de-France Mobilités"
+              width={88}
+              height={88}
+              className="h-20 w-20 object-contain"
+            />
+            <p className="text-sm leading-6 text-neutral-medium">
+              Nos aides reformulent les démarches avec des visuels et des textes plus directs pour le foyer.
+            </p>
+          </div>
           <ul className="grid gap-4">
             {questions.map((question) => (
               <li key={question} className="border-b border-neutral-light pb-4 last:border-b-0 last:pb-0">

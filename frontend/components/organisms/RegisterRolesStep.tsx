@@ -2,6 +2,7 @@ import { Checkbox } from "../atoms/Checkbox";
 import { InfoBox } from "../molecules/InfoBox";
 import { ProfileSummaryCard } from "../molecules/ProfileSummaryCard";
 import type { ChildForm, ParentForm, RolesForm } from "../register/types";
+import { getProfileVisual } from "@/lib/member-visuals";
 
 type RegisterRolesStepProps = {
   child: ChildForm;
@@ -19,11 +20,13 @@ export function RegisterRolesStep({ child, onChange, parent, roles }: RegisterRo
       <div className="grid gap-4 sm:grid-cols-2">
         <ProfileSummaryCard
           badges={["Compte principal", "Gestionnaire", roles.parentIsPayer ? "Payeur" : "Non payeur"]}
+          icon={getProfileVisual("MANAGER")}
           name={`${parent.firstName || "Parent"} ${parent.lastName || ""}`.trim()}
           subtitle="Parent"
         />
         <ProfileSummaryCard
           badges={["Profil enfant", "Porteur"]}
+          icon={getProfileVisual("YOUNG")}
           name={`${child.firstName || "Enfant"} ${child.lastName || ""}`.trim()}
           subtitle="Titre de transport"
         />

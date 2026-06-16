@@ -4,11 +4,20 @@ import Image from "next/image";
 type AuthLayoutProps = {
   children: ReactNode;
   eyebrow?: string;
+  illustrationAlt?: string;
+  illustrationSrc?: string;
   subtitle: string;
   title: string;
 };
 
-export function AuthLayout({ children, eyebrow = "Île-de-France Mobilités Connect", subtitle, title }: AuthLayoutProps) {
+export function AuthLayout({
+  children,
+  eyebrow = "Île-de-France Mobilités Connect",
+  illustrationAlt = "Illustration Île-de-France Mobilités",
+  illustrationSrc = "/assets/illustrations/station-waiting-area.png",
+  subtitle,
+  title,
+}: AuthLayoutProps) {
   return (
     <main className="min-h-screen bg-neutral-xlight">
       <header className="border-b border-neutral-light bg-idfm-anthracite px-5 py-4 text-white">
@@ -23,12 +32,11 @@ export function AuthLayout({ children, eyebrow = "Île-de-France Mobilités Conn
           <h1 className="mt-3 text-3xl font-bold leading-tight text-idfm-anthracite sm:text-4xl">{title}</h1>
           <p className="mt-4 max-w-xl text-base leading-7 text-neutral-medium">{subtitle}</p>
           <Image
-            src="/assets/illustrations/register-family.svg"
-            alt=""
-            width={420}
-            height={260}
-            aria-hidden="true"
-            className="mt-8 hidden w-full max-w-sm lg:block"
+            src={illustrationSrc}
+            alt={illustrationAlt}
+            width={520}
+            height={360}
+            className="mt-8 hidden w-full max-w-md rounded-3xl border border-neutral-light bg-white p-4 shadow-sm lg:block"
           />
         </aside>
         <div>{children}</div>

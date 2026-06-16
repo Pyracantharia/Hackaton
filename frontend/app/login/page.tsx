@@ -107,6 +107,36 @@ export default function LoginPage() {
           </AuthCard>
         </div>
 
+        <div className="mx-auto mt-6 grid max-w-5xl gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-neutral-light bg-white p-4 shadow-sm">
+            <Image
+              src="/assets/illustrations/navigo-card-and-paper-tickets.png"
+              alt="Carte Navigo et titres de transport"
+              width={220}
+              height={140}
+              className="mx-auto h-28 w-auto object-contain"
+            />
+          </div>
+          <div className="rounded-2xl border border-neutral-light bg-white p-4 shadow-sm">
+            <Image
+              src="/assets/illustrations/station-staff-high-five.png"
+              alt="Accompagnement usager"
+              width={220}
+              height={140}
+              className="mx-auto h-28 w-auto object-contain"
+            />
+          </div>
+          <div className="rounded-2xl border border-neutral-light bg-white p-4 shadow-sm">
+            <Image
+              src="/assets/illustrations/ticket-vending-machines.png"
+              alt="Services Île-de-France Mobilités"
+              width={220}
+              height={140}
+              className="mx-auto h-28 w-auto object-contain"
+            />
+          </div>
+        </div>
+
         <p className="mt-8 text-center text-sm text-neutral-medium">
           Île-de-France Mobilités Connect © 2026 ·{" "}
           <Link href="/register" className="font-semibold text-idfm-interaction underline-offset-4 hover:underline">

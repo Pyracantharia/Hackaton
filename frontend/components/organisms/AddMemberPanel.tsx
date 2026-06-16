@@ -1,4 +1,5 @@
 import { ChoiceCard } from "../molecules/ChoiceCard";
+import { getAddMemberVisual } from "@/lib/member-visuals";
 
 type AddMemberPanelProps = {
   onSelectProfile: (profileType: string) => void;
@@ -10,42 +11,42 @@ const options = [
     title: "Enfant / jeune",
     description: "Ajouter un profil scolaire avec titre, justificatifs et renouvellement.",
     badge: "Actif",
-    icon: "/assets/icons/child.svg",
+    imageSrc: getAddMemberVisual("young"),
   },
   {
     key: "senior",
     title: "Retraite / senior",
     description: "Accompagner un parent age vers une offre Senior ou Amethyste.",
     badge: "Actif",
-    icon: "/assets/icons/user.svg",
+    imageSrc: getAddMemberVisual("senior"),
   },
   {
     key: "partner",
     title: "Conjoint",
     description: "Mutualiser la gestion d'un profil adulte au sein du foyer.",
     badge: "Bientot",
-    icon: "/assets/icons/family.svg",
+    imageSrc: getAddMemberVisual("partner"),
   },
   {
     key: "caregiver",
     title: "Proche aide",
     description: "Suivre un dossier accompagne avec plus d'etapes explicatives.",
     badge: "Bientot",
-    icon: "/assets/icons/helper.svg",
+    imageSrc: getAddMemberVisual("caregiver"),
   },
   {
     key: "student",
     title: "Etudiant",
     description: "Etendre le compte famille a un parcours etudiant et pieces adaptees.",
     badge: "Bientot",
-    icon: "/assets/icons/discount.svg",
+    imageSrc: getAddMemberVisual("student"),
   },
   {
     key: "discount",
     title: "Reduction",
     description: "Verifier des droits et centraliser les justificatifs a venir.",
     badge: "Bientot",
-    icon: "/assets/icons/info.svg",
+    imageSrc: getAddMemberVisual("discount"),
   },
 ];
 
@@ -65,7 +66,7 @@ export function AddMemberPanel({ onSelectProfile }: AddMemberPanelProps) {
             key={option.key}
             badge={option.badge}
             description={option.description}
-            icon={option.icon}
+            imageSrc={option.imageSrc}
             onClick={() => onSelectProfile(option.key)}
             title={option.title}
             action={option.badge === "Actif" ? "Explorer" : "Bientot disponible"}

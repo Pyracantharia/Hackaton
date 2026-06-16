@@ -33,20 +33,20 @@ export function FamilyQuickActions({
             title="Renouveler un titre"
             description="Relancer rapidement le dossier Imagine R de Lucas avant la rentree."
             href={`/dashboard/family/renewal/${youngMember.id}`}
-            icon="/assets/icons/check.svg"
+            imageSrc="/assets/logos/pictogrammes/weekly-pass-card.png"
           />
         ) : null}
         <QuickActionCard
           title="J'ai trouve un passe"
           description="Un parcours public et neutre pour signaler un passe trouve sans exposer son proprietaire."
           href="/found-pass"
-          icon="/assets/icons/helper.svg"
+          imageSrc="/assets/illustrations/hand-holding-ticket.png"
         />
         <QuickActionCard
           title="Consulter mes profils"
           description="Retrouvez rapidement les titres, statuts et actions associees aux profils de votre foyer."
           href="/dashboard/family?tab=profiles"
-          icon="/assets/icons/user.svg"
+          imageSrc="/assets/logos/pictogrammes/family-pictogram.png"
         />
       </div>
 

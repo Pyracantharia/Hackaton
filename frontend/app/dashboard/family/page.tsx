@@ -37,25 +37,6 @@ function getActiveTab(value: string | null): DashboardTabId {
   }
 }
 
-function getStoredUserName() {
-  if (typeof window === "undefined") {
-    return "Mon espace";
-  }
-
-  const storedUser = sessionStorage.getItem("familyUser");
-
-  if (!storedUser) {
-    return "Mon espace";
-  }
-
-  try {
-    const user = JSON.parse(storedUser) as { firstName?: string };
-    return user.firstName ?? "Mon espace";
-  } catch {
-    return "Mon espace";
-  }
-}
-
 function buildSummaryItems(data: HouseholdDashboardResponse) {
   return [
     `Bonjour ${data.manager.firstName}`,
@@ -87,9 +68,7 @@ function FamilyDashboardFallback() {
 function FamilyDashboardPageContent() {
   const searchParams = useSearchParams();
   const [data, setData] = useState<HouseholdDashboardResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(() => (
-    typeof window !== "undefined" ? Boolean(localStorage.getItem("familyAccessToken")) : true
-  ));
+  const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [flash, setFlash] = useState<FlashMessage | null>(null);
   const [isLostPassOpen, setIsLostPassOpen] = useState(false);
@@ -101,8 +80,10 @@ function FamilyDashboardPageContent() {
     const accessToken = localStorage.getItem("familyAccessToken");
 
     if (!accessToken) {
-      setIsLoading(false);
-      setLoadError("Connectez-vous pour charger votre foyer.");
+      queueMicrotask(() => {
+        setIsLoading(false);
+        setLoadError("Connectez-vous pour charger votre foyer.");
+      });
       return;
     }
 
@@ -269,7 +250,7 @@ function FamilyDashboardPageContent() {
       subtitle="Gerez les titres de votre foyer depuis un seul espace, avec des alertes, des profils et des actions adaptees a chaque situation."
       summaryItems={data ? buildSummaryItems(data) : ["Chargement du foyer"]}
       title="Mon foyer Navigo"
-      userName={data?.manager.firstName ?? getStoredUserName()}
+      userName={data?.manager.firstName ?? "Mon espace"}
     >
       <div className="grid gap-8">
         {isLoading ? (

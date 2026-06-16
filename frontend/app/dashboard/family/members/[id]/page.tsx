@@ -14,25 +14,7 @@ import {
   getHouseholdMemberDetail,
 } from "@/lib/api/households";
 import type { MemberDetailResponse } from "@/lib/api/types";
-
-function getStoredUserName() {
-  if (typeof window === "undefined") {
-    return "Mon espace";
-  }
-
-  const storedUser = sessionStorage.getItem("familyUser");
-
-  if (!storedUser) {
-    return "Mon espace";
-  }
-
-  try {
-    const user = JSON.parse(storedUser) as { firstName?: string };
-    return user.firstName ?? "Mon espace";
-  } catch {
-    return "Mon espace";
-  }
-}
+import { getProfileVisual } from "@/lib/member-visuals";
 
 export default function MemberDetailPage() {
   const params = useParams<{ id: string }>();
@@ -47,7 +29,9 @@ export default function MemberDetailPage() {
     const accessToken = localStorage.getItem("familyAccessToken");
 
     if (!accessToken) {
-      setLoadError("Connectez-vous pour charger ce profil.");
+      queueMicrotask(() => {
+        setLoadError("Connectez-vous pour charger ce profil.");
+      });
       return;
     }
 
@@ -112,7 +96,7 @@ export default function MemberDetailPage() {
         subtitle="Detail du profil, informations utiles, documents attendus et prochaines actions."
         summaryItems={["Chargement du profil"]}
         title="Profil foyer"
-        userName={getStoredUserName()}
+        userName="Mon espace"
       >
         <InfoBox tone={loadError ? "orange" : "blue"}>{loadError ?? "Chargement du profil..."}</InfoBox>
       </DashboardLayout>
@@ -133,7 +117,7 @@ export default function MemberDetailPage() {
         detail.member.currentProduct ?? detail.member.recommendedProduct ?? "Profil foyer",
       ]}
       title={`${detail.member.firstName} ${detail.member.lastName}`}
-      userName={getStoredUserName()}
+      userName={detail.manager.firstName ?? "Mon espace"}
     >
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="grid gap-6">
@@ -150,6 +134,7 @@ export default function MemberDetailPage() {
             ]}
             currentProduct={detail.member.currentProduct ?? detail.member.recommendedProduct}
             description={detail.overview}
+            icon={getProfileVisual(detail.member.profileType)}
             meta={[detail.supportNote]}
             name={`${detail.member.firstName} ${detail.member.lastName}`}
             status={<StatusBadge status={detail.member.status} />}

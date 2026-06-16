@@ -68,7 +68,7 @@ export function DashboardLayout({
             <div className="flex items-center gap-8">
               <Link href="/">
                 <Image
-                  src="/assets/logos/idfm-logo.svg"
+                  src="/assets/logos/idfm-wordmark-horizontal.png"
                   alt="Ile-de-France Mobilites"
                   width={176}
                   height={42}
@@ -149,15 +149,24 @@ export function DashboardLayout({
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.2fr_1fr_1fr_1fr]">
           <div>
             <Image
-              src="/assets/logos/idfm-logo.svg"
+              src="/assets/logos/idfm-logo-horizontal.png"
               alt="Ile-de-France Mobilites"
-              width={176}
-              height={42}
-              className="h-10 w-auto"
+              width={220}
+              height={56}
+              className="h-12 w-auto"
             />
             <p className="mt-4 max-w-sm text-sm leading-6 text-white/75">
               Un espace famille plus simple pour suivre les titres, les dossiers et les prochaines actions de votre foyer.
             </p>
+            <div className="mt-5 rounded-2xl bg-white/5 p-4">
+              <Image
+                src="/assets/illustrations/modern-station-entrance.png"
+                alt="Station Île-de-France Mobilités"
+                width={280}
+                height={180}
+                className="h-auto w-full rounded-xl object-contain"
+              />
+            </div>
           </div>
 
           {footerColumns.map((column) => (

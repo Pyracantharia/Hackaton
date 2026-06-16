@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { IconPlaceholder } from "../atoms/IconPlaceholder";
@@ -6,6 +7,7 @@ type QuickActionCardProps = {
   description: string;
   href?: string;
   icon?: string;
+  imageSrc?: string;
   onClick?: () => void;
   title: string;
   trailing?: ReactNode;
@@ -18,6 +20,7 @@ export function QuickActionCard({
   description,
   href,
   icon,
+  imageSrc,
   onClick,
   title,
   trailing,
@@ -25,7 +28,13 @@ export function QuickActionCard({
   const content = (
     <>
       <div className="flex items-start justify-between gap-3">
-        <IconPlaceholder label={title} src={icon} />
+        {imageSrc ? (
+          <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-idfm-light">
+            <Image src={imageSrc} alt="" width={64} height={64} className="h-14 w-14 object-contain" aria-hidden="true" />
+          </span>
+        ) : (
+          <IconPlaceholder label={title} src={icon} />
+        )}
         {trailing}
       </div>
       <div className="mt-5">

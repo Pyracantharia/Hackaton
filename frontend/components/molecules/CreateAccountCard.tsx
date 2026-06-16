@@ -14,12 +14,11 @@ export function CreateAccountCard() {
   return (
     <div className="grid gap-5">
       <Image
-        src="/assets/illustrations/register-family.svg"
-        alt=""
-        width={420}
-        height={260}
-        aria-hidden="true"
-        className="mx-auto w-full max-w-64"
+        src="/assets/illustrations/navigo-card-and-paper-tickets.png"
+        alt="Carte Navigo et billets Île-de-France Mobilités"
+        width={320}
+        height={220}
+        className="mx-auto rounded-2xl bg-idfm-light p-4"
       />
       <p className="text-sm leading-6 text-neutral-medium">
         Créez votre espace famille pour gérer vos titres et ceux de vos proches : enfant, jeune, retraité ou proche aidé.

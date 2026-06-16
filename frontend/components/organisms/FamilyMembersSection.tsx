@@ -3,6 +3,7 @@ import { Button } from "../atoms/Button";
 import { ProfileSummaryCard } from "../molecules/ProfileSummaryCard";
 import { StatusBadge } from "../molecules/StatusBadge";
 import type { DashboardMember } from "@/lib/api/types";
+import { getProfileVisual } from "@/lib/member-visuals";
 
 type FamilyMembersSectionProps = {
   cardsId?: string;
@@ -104,6 +105,7 @@ export function FamilyMembersSection({
             badges={getMemberBadges(member)}
             currentProduct={member.currentProduct ?? member.recommendedProduct}
             description={member.nextAction}
+            icon={getProfileVisual(member.profileType)}
             meta={[
               member.payerName ? `Payeur : ${member.payerName}` : "Payeur a definir",
               member.relationLabel,
