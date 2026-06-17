@@ -50,26 +50,26 @@ function getPrimaryAction(member: DashboardMember) {
 
 function getPrimaryLabel(member: DashboardMember) {
   if (member.profileType === "YOUNG") {
-    return "Renouveler";
+    return "Trouver une offre";
   }
 
   if (member.profileType === "SENIOR") {
     return "Verifier l'offre";
   }
 
-  return "Voir mon titre";
+  return "Gérer mes infos";
 }
 
 function getSecondaryLabel(member: DashboardMember) {
   if (member.profileType === "YOUNG") {
-    return "Voir le dossier";
+    return "Voir le profil";
   }
 
   if (member.profileType === "SENIOR") {
     return "Voir le profil";
   }
 
-  return "Attestation employeur";
+  return "Voir le foyer";
 }
 
 function getSecondaryHref(member: DashboardMember) {
@@ -85,7 +85,7 @@ export function FamilyMembersSection({
   members,
   sectionId = "profiles",
   title = "Profils du foyer",
-  description = "Chaque profil dispose de son titre, de son statut et de sa prochaine action.",
+  description = "Chaque profil peut ensuite être orienté vers une offre, une démarche ou un titre à rattacher.",
 }: FamilyMembersSectionProps) {
   return (
     <section id={sectionId} className="mt-12">

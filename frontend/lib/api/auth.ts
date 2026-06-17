@@ -10,6 +10,40 @@ async function parseApiError(response: Response) {
   return message;
 }
 
+function shouldRetryWithLegacyRegisterPayload(message: string) {
+  return message.includes("property members should not exist") || message.includes("child must be an object");
+}
+
+function buildLegacyRegisterPayload(payload: RegisterFamilyPayload) {
+  const youngMember = payload.members.find((member) => member.type === "YOUNG");
+
+  if (!youngMember) return null;
+
+  return {
+    consents: payload.consents,
+    parent: payload.parent,
+    roles: payload.roles,
+    verification: payload.verification,
+    child: {
+      birthDate: youngMember.birthDate,
+      department: youngMember.department,
+      firstName: youngMember.firstName,
+      lastName: youngMember.lastName,
+      schoolLevel: youngMember.schoolLevel ?? "OTHER",
+    },
+  };
+}
+
+async function postRegisterFamily(payload: unknown) {
+  return fetch(buildApiUrl("/api/auth/register-family"), {
+    body: JSON.stringify(payload),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+}
+
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
   let response: Response;
 
@@ -36,19 +70,26 @@ export async function registerFamily(payload: RegisterFamilyPayload): Promise<Re
   let response: Response;
 
   try {
-    response = await fetch(buildApiUrl("/api/auth/register-family"), {
-      body: JSON.stringify(payload),
-      headers: {
-        "Content-Type": "application/json",
-      },
-      method: "POST",
-    });
+    response = await postRegisterFamily(payload);
   } catch {
     throw new Error("Impossible de joindre le service d'inscription. Vérifiez que le backend est démarré.");
   }
   
   if (!response.ok) {
-    throw new Error(await parseApiError(response));
+    const message = await parseApiError(response);
+    const legacyPayload = shouldRetryWithLegacyRegisterPayload(message) ? buildLegacyRegisterPayload(payload) : null;
+
+    if (legacyPayload) {
+      const retryResponse = await postRegisterFamily(legacyPayload);
+
+      if (retryResponse.ok) {
+        return retryResponse.json() as Promise<RegisterFamilyResponse>;
+      }
+
+      throw new Error(await parseApiError(retryResponse));
+    }
+
+    throw new Error(message);
   }
 
   return response.json() as Promise<RegisterFamilyResponse>;

@@ -13,7 +13,7 @@ import { RegisterVerificationStep } from "@/components/organisms/RegisterVerific
 import { StepIndicator } from "@/components/molecules/StepIndicator";
 import { AuthLayout } from "@/components/templates/AuthLayout";
 import { registerFamily } from "@/lib/api/auth";
-import type { IdfDepartment, SchoolLevel } from "@/lib/api/types";
+import type { RegisterFamilyMemberPayload } from "@/lib/api/types";
 import type { RegisterErrors, RegisterFormState, RegisterResult } from "@/components/register/types";
 import { isStrongPassword } from "@/components/molecules/PasswordChecklist";
 
@@ -32,13 +32,18 @@ const initialForm: RegisterFormState = {
     smsCode: "123456",
     emailCode: "654321",
   },
-  child: {
+  members: [{
     birthDate: "2014-09-12",
     department: "94",
     firstName: "Lucas",
+    id: "demo-lucas-martin",
+    isHolder: true,
+    isPayer: false,
     lastName: "Martin",
+    relationship: "CHILD",
     schoolLevel: "COLLEGE",
-  },
+    type: "YOUNG",
+  }],
   roles: {
     parentIsLegalRepresentative: true,
     parentIsPayer: true,
@@ -53,6 +58,19 @@ const initialForm: RegisterFormState = {
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^\+\d{9,15}$/;
+
+function getAge(birthDate: string) {
+  const date = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - date.getFullYear();
+  const monthDelta = today.getMonth() - date.getMonth();
+
+  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < date.getDate())) {
+    age -= 1;
+  }
+
+  return Number.isFinite(age) ? age : null;
+}
 
 export default function RegisterPage() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -81,13 +99,15 @@ export default function RegisterPage() {
     }
 
     if (step === 3) {
-      if (!form.child.firstName.trim()) nextErrors.childFirstName = "Indiquez le prénom de l'enfant.";
-      if (!form.child.lastName.trim()) nextErrors.childLastName = "Indiquez le nom de l'enfant.";
-      if (!form.child.birthDate) nextErrors.birthDate = "Indiquez la date de naissance de l'enfant.";
+      if (!form.members.length) nextErrors.members = "Ajoutez au moins un profil pour créer votre espace famille.";
     }
 
-    if (step === 4 && !form.roles.parentIsLegalRepresentative) {
-      nextErrors.roles = "Vous devez confirmer votre rôle de responsable légal pour ajouter cet enfant.";
+    if (
+      step === 4 &&
+      form.members.some((member) => member.type === "YOUNG" && (getAge(member.birthDate) ?? 18) < 18) &&
+      !form.roles.parentIsLegalRepresentative
+    ) {
+      nextErrors.roles = "Confirmez votre autorisation pour gérer les démarches des mineurs ajoutés.";
     }
 
     if (step === 5 && !form.consents.serviceAlerts) {
@@ -116,9 +136,31 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
+      const members = form.members.map((member): RegisterFamilyMemberPayload => ({
+        birthDate: member.birthDate,
+        department: member.department,
+        firstName: member.firstName,
+        isHolder: member.isHolder,
+        isPayer: member.isPayer,
+        lastName: member.lastName,
+        relationship: member.relationship,
+        schoolLevel: member.schoolLevel,
+        seniorRelationship: member.seniorRelationship,
+        type: member.type,
+      }));
+      const firstYoungMember = members.find((member) => member.type === "YOUNG");
       const response = await registerFamily({
-        child: form.child,
+        child: firstYoungMember
+          ? {
+              birthDate: firstYoungMember.birthDate,
+              department: firstYoungMember.department,
+              firstName: firstYoungMember.firstName,
+              lastName: firstYoungMember.lastName,
+              schoolLevel: firstYoungMember.schoolLevel ?? "OTHER",
+            }
+          : undefined,
         consents: form.consents,
+        members,
         parent: {
           email: form.parent.email,
           firstName: form.parent.firstName,
@@ -149,9 +191,9 @@ export default function RegisterPage() {
           "",
           "Vos informations de connexion",
           "Vérifions vos coordonnées",
-          "Ajoutons votre premier profil",
+          "Composez votre foyer Navigo",
           "Qui utilise et qui paie le titre ?",
-          "Vos préférences de communication",
+          "Comment souhaitez-vous être accompagné ?",
         ][currentStep];
 
   const subtitle = currentStep === 0
@@ -162,9 +204,9 @@ export default function RegisterPage() {
           "",
           "Ce compte vous permettra de gérer vos titres et ceux de vos enfants.",
           "Pour sécuriser votre espace famille, nous vérifions votre téléphone et votre adresse e-mail.",
-          "Vous pourrez gérer plusieurs profils depuis le même espace : vous-même, vos enfants ou un proche.",
+          "Ajoutez les personnes dont vous souhaitez gérer les titres de transport.",
           "Visualisez simplement la différence entre compte principal, payeur et porteur.",
-          "Choisissez clairement les communications que vous souhaitez recevoir.",
+          "Choisissez les alertes et conseils utiles pour suivre les titres de votre foyer.",
         ][currentStep];
 
   const illustrationSrc =
@@ -203,23 +245,15 @@ export default function RegisterPage() {
 
         {currentStep === 3 ? (
           <RegisterFamilyMemberStep
-            data={form.child}
             errors={errors}
-            onChange={(field, value) =>
-              setForm((state) => ({
-                ...state,
-                child: {
-                  ...state.child,
-                  [field]: field === "schoolLevel" ? (value as SchoolLevel) : field === "department" ? (value as IdfDepartment) : value,
-                },
-              }))
-            }
+            members={form.members}
+            onChange={(members) => setForm((state) => ({ ...state, members }))}
           />
         ) : null}
 
         {currentStep === 4 ? (
           <RegisterRolesStep
-            child={form.child}
+            members={form.members}
             parent={form.parent}
             roles={form.roles}
             onChange={(field, value) => setForm((state) => ({ ...state, roles: { ...state.roles, [field]: value } }))}

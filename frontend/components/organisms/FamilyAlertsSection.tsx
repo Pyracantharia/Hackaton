@@ -26,7 +26,7 @@ function getNotificationActionLabel(notification: DashboardNotification) {
   }
 
   if (notification.type === "OFFER_RECOMMENDATION") {
-    return "Voir le profil";
+    return "Choisir une offre";
   }
 
   if (notification.type === "SUPPORT_UPDATE") {

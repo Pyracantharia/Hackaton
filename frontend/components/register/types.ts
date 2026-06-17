@@ -1,4 +1,11 @@
-import type { IdfDepartment, RegisterFamilyResponse, SchoolLevel } from "@/lib/api/types";
+import type {
+  IdfDepartment,
+  RegisterFamilyResponse,
+  RegisterMemberRelationship,
+  RegisterMemberType,
+  SchoolLevel,
+  SeniorRelationship,
+} from "@/lib/api/types";
 
 export type ParentForm = {
   confirmationPassword: string;
@@ -15,6 +22,28 @@ export type ChildForm = {
   firstName: string;
   lastName: string;
   schoolLevel: SchoolLevel;
+};
+
+export type SeniorForm = {
+  birthDate: string;
+  department: IdfDepartment;
+  firstName: string;
+  lastName: string;
+  seniorRelationship: SeniorRelationship;
+};
+
+export type RegisterMemberForm = {
+  birthDate: string;
+  department: IdfDepartment;
+  firstName: string;
+  id: string;
+  isHolder: boolean;
+  isPayer: boolean;
+  lastName: string;
+  relationship: RegisterMemberRelationship;
+  schoolLevel?: SchoolLevel;
+  seniorRelationship?: SeniorRelationship;
+  type: RegisterMemberType;
 };
 
 export type RolesForm = {
@@ -35,8 +64,8 @@ export type VerificationForm = {
 };
 
 export type RegisterFormState = {
-  child: ChildForm;
   consents: ConsentsForm;
+  members: RegisterMemberForm[];
   parent: ParentForm;
   roles: RolesForm;
   verification: VerificationForm;
@@ -63,4 +92,12 @@ export const departmentLabels: Record<IdfDepartment, string> = {
   "93": "Seine-Saint-Denis (93)",
   "94": "Val-de-Marne (94)",
   "95": "Val-d'Oise (95)",
+};
+
+export const seniorRelationshipLabels: Record<SeniorRelationship, string> = {
+  PARENT: "Parent",
+  GRAND_PARENT: "Grand-parent",
+  SPOUSE: "Conjoint",
+  CAREGIVER: "Proche aidé",
+  OTHER: "Autre",
 };

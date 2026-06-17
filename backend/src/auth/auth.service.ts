@@ -21,6 +21,19 @@ export class AuthService {
     });
   }
 
+  private getAge(birthDate: string) {
+    const date = new Date(birthDate);
+    const today = new Date();
+    let age = today.getFullYear() - date.getFullYear();
+    const monthDelta = today.getMonth() - date.getMonth();
+
+    if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < date.getDate())) {
+      age -= 1;
+    }
+
+    return Number.isFinite(age) ? age : null;
+  }
+
   async login(data: LoginDto) {
     const user = await this.prismaService.user.findUnique({
       where: { email: data.email },
@@ -101,8 +114,39 @@ export class AuthService {
         throw new BadRequestException("Les alertes indispensables doivent être activées pour créer l'espace famille.");
       }
 
-      if (!data.roles.parentIsLegalRepresentative) {
-        throw new BadRequestException("Le responsable légal doit confirmer son rôle pour ajouter un enfant.");
+      const familyMembers = data.members?.length
+        ? data.members
+        : data.child
+          ? [{
+              type: "YOUNG" as const,
+              relationship: "CHILD" as const,
+              firstName: data.child.firstName,
+              lastName: data.child.lastName,
+              birthDate: data.child.birthDate,
+              schoolLevel: data.child.schoolLevel,
+              department: data.child.department,
+              isHolder: true,
+              isPayer: false,
+            }]
+          : [];
+
+      if (!familyMembers.length) {
+        throw new BadRequestException("Ajoutez au moins un profil pour créer l'espace famille.");
+      }
+
+      const hasMinorYoungMember = familyMembers.some((member) => {
+        const age = this.getAge(member.birthDate);
+        return member.type === "YOUNG" && age !== null && age < 18;
+      });
+
+      if (hasMinorYoungMember && !data.roles.parentIsLegalRepresentative) {
+        throw new BadRequestException("Le responsable légal doit confirmer son rôle pour ajouter un mineur.");
+      }
+
+      for (const member of familyMembers) {
+        if (member.type === "YOUNG" && !member.schoolLevel) {
+          throw new BadRequestException(`Le niveau scolaire est obligatoire pour ${member.firstName}.`);
+        }
       }
 
       const existingUser = await this.prismaService.user.findUnique({
@@ -147,52 +191,53 @@ export class AuthService {
           },
         });
 
-        const childMember = await tx.householdMember.create({
-          data: {
-            householdId: household.id,
-            firstName: data.child.firstName,
-            lastName: data.child.lastName,
-            birthDate: new Date(data.child.birthDate),
-            relationship: "CHILD",
-            profileType: "YOUNG",
-            schoolLevel: data.child.schoolLevel,
-            department: data.child.department,
-            isHolder: true,
-            isPayer: false,
-            isLegalRepresentative: false,
-          },
-        });
+        const createdMembers: Array<{
+          input: (typeof familyMembers)[number];
+          record: typeof parentMember;
+        }> = [];
 
-        await tx.subscription.createMany({
-          data: [
-            {
-              householdMemberId: parentMember.id,
-              productType: "NAVIGO_ANNUAL",
-              productName: "Navigo Annuel",
-              status: "ACTIVE",
-              nextActionLabel: "Voir mon titre",
+        for (const member of familyMembers) {
+          const createdMember = await tx.householdMember.create({
+            data: {
+              householdId: household.id,
+              firstName: member.firstName,
+              lastName: member.lastName,
+              birthDate: new Date(member.birthDate),
+              relationship: member.type === "YOUNG" ? "CHILD" : "RELATIVE",
+              profileType: member.type,
+              schoolLevel: member.type === "YOUNG" ? member.schoolLevel : null,
+              department: member.department,
+              isHolder: member.isHolder,
+              isPayer: member.isPayer,
+              isLegalRepresentative: false,
             },
-            {
-              householdMemberId: childMember.id,
-              productType: "IMAGINE_R",
-              productName: "Imagine R Scolaire",
-              status: "TO_RENEW",
-              nextActionLabel: "Renouveler avant la rentree",
-              renewalDate: new Date(`${new Date().getUTCFullYear()}-08-31T00:00:00.000Z`),
-            },
-          ],
-        });
+          });
 
-        await tx.familyNotification.create({
-          data: {
-            householdId: household.id,
-            memberId: childMember.id,
-            type: "RENEWAL",
-            severity: "WARNING",
-            title: `${data.child.firstName} — Renouvellement Imagine R conseille`,
-            message:
-              "Les demandes sont nombreuses avant la rentree. Renouvelez des maintenant pour eviter les delais.",
-          },
+          createdMembers.push({ input: member, record: createdMember });
+        }
+
+        await tx.familyNotification.createMany({
+          data: createdMembers.map(({ input, record }) => (
+            input.type === "YOUNG"
+              ? {
+                  householdId: household.id,
+                  memberId: record.id,
+                  type: "OFFER_RECOMMENDATION" as const,
+                  severity: "INFO" as const,
+                  title: `${input.firstName} — Forfait jeune a choisir`,
+                  message:
+                    "Aucun titre n'est encore rattache. Vous pourrez comparer les offres jeune adaptees a son profil.",
+                }
+              : {
+                  householdId: household.id,
+                  memberId: record.id,
+                  type: "OFFER_RECOMMENDATION" as const,
+                  severity: "INFO" as const,
+                  title: `${input.firstName} — Offre Senior a verifier`,
+                  message:
+                    "Un accompagnement peut aider a identifier l'offre Navigo Senior ou Amethyste adaptee.",
+                }
+          )),
         });
 
         await tx.familyNotification.create({
@@ -215,19 +260,20 @@ export class AuthService {
             },
             {
               householdId: household.id,
-              memberId: childMember.id,
-              label: `${data.child.firstName} a ete ajoute comme profil enfant.`,
+              label: `${createdMembers.length} profil(s) ajoute(s) au foyer.`,
             },
             {
               householdId: household.id,
               memberId: parentMember.id,
               label: `Role payeur confirme pour ${data.parent.firstName}.`,
             },
-            {
+            ...createdMembers.map(({ input, record }) => ({
               householdId: household.id,
-              memberId: childMember.id,
-              label: `Renouvellement Imagine R recommande pour ${data.child.firstName}.`,
-            },
+              memberId: record.id,
+              label: input.type === "YOUNG"
+                ? `Profil jeune ajoute pour ${input.firstName}, sans titre rattache.`
+                : `Offre Senior a verifier pour ${input.firstName}.`,
+            })),
           ],
         });
 
@@ -242,7 +288,7 @@ export class AuthService {
             actions: {
               create: [
                 {
-                  label: "Voir mon titre",
+                  label: "Gerer mes informations",
                   href: "/dashboard/family?tab=profiles",
                   variant: "PRIMARY",
                   order: 1,
@@ -258,32 +304,57 @@ export class AuthService {
           },
         });
 
-        await tx.memberProfileDetail.create({
-          data: {
-            householdMemberId: childMember.id,
-            householdRole: "Porteur du titre",
-            overview: `${data.child.firstName} peut etre renouvele des maintenant pour anticiper la rentree scolaire.`,
-            supportNote: `Payeur : ${data.parent.firstName} ${data.parent.lastName}. Documents attendus : photo recente et certificat scolaire.`,
-            accessibilityNote: null,
-            documents: ["Photo recente", "Certificat scolaire", "Piece d'identite si demandee"],
-            actions: {
-              create: [
-                {
-                  label: "Commencer le renouvellement",
-                  href: `/dashboard/family/renewal/${childMember.id}`,
-                  variant: "PRIMARY",
-                  order: 1,
-                },
-                {
-                  label: "Voir les justificatifs",
-                  href: `/dashboard/family/members/${childMember.id}#documents`,
-                  variant: "SECONDARY",
-                  order: 2,
-                },
-              ],
+        for (const { input, record } of createdMembers) {
+          const isYoung = input.type === "YOUNG";
+
+          await tx.memberProfileDetail.create({
+            data: {
+              householdMemberId: record.id,
+              householdRole: isYoung ? "Porteur du titre scolaire" : "Profil senior accompagne",
+              overview: isYoung
+                ? `${input.firstName} n'a pas encore de titre rattache. Vous pourrez choisir une offre adaptee a son profil.`
+                : `${input.firstName} pourra verifier une offre Navigo Senior ou Amethyste adaptee a sa situation.`,
+              supportNote: isYoung
+                ? `Payeur : ${data.parent.firstName} ${data.parent.lastName}. Documents attendus : photo recente et certificat scolaire.`
+                : `Gestionnaire : ${data.parent.firstName} ${data.parent.lastName}. Les justificatifs dependront de l'offre retenue.`,
+              accessibilityNote: null,
+              documents: isYoung
+                ? ["Photo recente", "Certificat scolaire", "Piece d'identite si demandee"]
+                : ["Piece d'identite", "Justificatif de domicile", "Justificatif de situation si demande"],
+              actions: {
+                create: isYoung
+                  ? [
+                      {
+                        label: "Trouver une offre adaptee",
+                        href: `/dashboard/family/renewal/${record.id}`,
+                        variant: "PRIMARY",
+                        order: 1,
+                      },
+                      {
+                        label: "Voir les justificatifs",
+                        href: `/dashboard/family/members/${record.id}#documents`,
+                        variant: "SECONDARY",
+                        order: 2,
+                      },
+                    ]
+                  : [
+                      {
+                        label: "Verifier l'offre adaptee",
+                        href: `/dashboard/family/members/${record.id}#eligibilite`,
+                        variant: "PRIMARY",
+                        order: 1,
+                      },
+                      {
+                        label: "Voir le profil",
+                        href: `/dashboard/family/members/${record.id}`,
+                        variant: "SECONDARY",
+                        order: 2,
+                      },
+                    ],
+              },
             },
-          },
-        });
+          });
+        }
 
         await tx.consent.createMany({
           data: [
@@ -305,7 +376,7 @@ export class AuthService {
           ],
         });
 
-        return { user, household, members: [parentMember, childMember] };
+        return { user, household, members: [parentMember, ...createdMembers.map(({ record }) => record)] };
       });
 
       const accessToken = await this.signAccessToken(result.user);
@@ -332,7 +403,7 @@ export class AuthService {
         })),
         nextAction: {
           type: "RECOMMEND_PRODUCT",
-          label: `Voir le forfait recommandé pour ${data.child.firstName}`,
+          label: `Voir les recommandations du foyer`,
         },
         accessToken,
       };

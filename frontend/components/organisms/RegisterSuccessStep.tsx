@@ -11,7 +11,7 @@ type RegisterSuccessStepProps = {
 
 export function RegisterSuccessStep({ result }: RegisterSuccessStepProps) {
   const parent = result.members.find((member) => member.relationship === "SELF");
-  const child = result.members.find((member) => member.relationship === "CHILD");
+  const householdMembers = result.members.filter((member) => member.relationship !== "SELF");
 
   return (
     <div className="grid gap-5">
@@ -25,12 +25,15 @@ export function RegisterSuccessStep({ result }: RegisterSuccessStepProps) {
           name={`${parent?.firstName ?? result.user.firstName} ${parent?.lastName ?? result.user.lastName}`}
           subtitle="Gestionnaire du foyer"
         />
-        <ProfileSummaryCard
-          badges={["Profil enfant", "Porteur"]}
-          icon={getProfileVisual("YOUNG")}
-          name={`${child?.firstName ?? "Lucas"} ${child?.lastName ?? "Martin"}`}
-          subtitle="Forfait à recommander"
-        />
+        {householdMembers.map((member) => (
+          <ProfileSummaryCard
+            key={member.id}
+            badges={[member.relationship === "CHILD" ? "Enfant / jeune" : "Proche accompagné", "Porteur"]}
+            icon={getProfileVisual(member.relationship === "CHILD" ? "YOUNG" : "SENIOR")}
+            name={`${member.firstName} ${member.lastName}`}
+            subtitle={member.relationship === "CHILD" ? "Forfait à recommander" : "Offre à vérifier"}
+          />
+        ))}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <Link href="/dashboard/family" className="contents">

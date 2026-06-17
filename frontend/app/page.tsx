@@ -31,11 +31,13 @@ const mainTargets = [
   {
     title: "Jeune / enfant scolarise",
     description: "Suivre le dossier Imagine R, anticiper la rentree et guider le parent payeur.",
+    badge: "MVP",
     imageSrc: "/assets/illustrations/young-girl-waving.png",
   },
   {
     title: "Senior / retraite",
     description: "Verifier une offre adaptee, clarifier les justificatifs et accompagner la souscription.",
+    badge: "MVP",
     imageSrc: "/assets/illustrations/senior-woman-with-cane.png",
   },
 ];

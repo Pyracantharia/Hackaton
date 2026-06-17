@@ -2,12 +2,15 @@ import {
   IsBoolean,
   IsEmail,
   IsIn,
+  IsArray,
   IsISO8601,
   IsNotEmpty,
   IsObject,
+  IsOptional,
   IsPhoneNumber,
   IsString,
   Matches,
+  ArrayMinSize,
   ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
@@ -21,6 +24,9 @@ export const SCHOOL_LEVELS = [
 ] as const;
 
 export const IDF_DEPARTMENTS = ["75", "77", "78", "91", "92", "93", "94", "95"] as const;
+export const REGISTER_MEMBER_TYPES = ["YOUNG", "SENIOR"] as const;
+export const REGISTER_MEMBER_RELATIONSHIPS = ["CHILD", "RELATIVE"] as const;
+export const SENIOR_RELATIONSHIPS = ["PARENT", "GRAND_PARENT", "SPOUSE", "CAREGIVER", "OTHER"] as const;
 
 export class RegisterFamilyParentDto {
   @IsString()
@@ -63,6 +69,42 @@ export class RegisterFamilyChildDto {
   department: (typeof IDF_DEPARTMENTS)[number];
 }
 
+export class RegisterFamilyMemberDto {
+  @IsIn(REGISTER_MEMBER_TYPES)
+  type: (typeof REGISTER_MEMBER_TYPES)[number];
+
+  @IsIn(REGISTER_MEMBER_RELATIONSHIPS)
+  relationship: (typeof REGISTER_MEMBER_RELATIONSHIPS)[number];
+
+  @IsString()
+  @IsNotEmpty()
+  firstName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  lastName: string;
+
+  @IsISO8601()
+  birthDate: string;
+
+  @IsIn(IDF_DEPARTMENTS)
+  department: (typeof IDF_DEPARTMENTS)[number];
+
+  @IsOptional()
+  @IsIn(SCHOOL_LEVELS)
+  schoolLevel?: (typeof SCHOOL_LEVELS)[number];
+
+  @IsOptional()
+  @IsIn(SENIOR_RELATIONSHIPS)
+  seniorRelationship?: (typeof SENIOR_RELATIONSHIPS)[number];
+
+  @IsBoolean()
+  isHolder: boolean;
+
+  @IsBoolean()
+  isPayer: boolean;
+}
+
 export class RegisterFamilyRolesDto {
   @IsBoolean()
   parentIsLegalRepresentative: boolean;
@@ -102,7 +144,15 @@ export class RegisterFamilyDto {
   @ValidateNested()
   @Type(() => RegisterFamilyChildDto)
   @IsObject()
-  child: RegisterFamilyChildDto;
+  @IsOptional()
+  child?: RegisterFamilyChildDto;
+
+  @ValidateNested({ each: true })
+  @Type(() => RegisterFamilyMemberDto)
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsOptional()
+  members?: RegisterFamilyMemberDto[];
 
   @ValidateNested()
   @Type(() => RegisterFamilyRolesDto)

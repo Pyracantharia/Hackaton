@@ -6,6 +6,7 @@ type StatusBadgeProps = {
 };
 
 const labels: Record<DashboardMemberStatus, string> = {
+  NO_SUBSCRIPTION: "Aucun titre",
   ACTIVE: "Actif",
   TO_RENEW: "A renouveler",
   RECOMMENDED: "Offre a verifier",
@@ -16,6 +17,7 @@ const labels: Record<DashboardMemberStatus, string> = {
 };
 
 const tones: Record<DashboardMemberStatus, "blue" | "green" | "orange" | "red"> = {
+  NO_SUBSCRIPTION: "blue",
   ACTIVE: "green",
   TO_RENEW: "orange",
   RECOMMENDED: "orange",

@@ -3,6 +3,7 @@
 import { Suspense, startTransition, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { InfoBox } from "@/components/molecules/InfoBox";
+import { AddHouseholdMemberModal } from "@/components/organisms/AddHouseholdMemberModal";
 import { AddMemberPanel } from "@/components/organisms/AddMemberPanel";
 import { FamilyAlertsSection } from "@/components/organisms/FamilyAlertsSection";
 import { FamilyHelpSection } from "@/components/organisms/FamilyHelpSection";
@@ -12,10 +13,11 @@ import { FamilyRecentActivity } from "@/components/organisms/FamilyRecentActivit
 import { LostPassModal } from "@/components/organisms/LostPassModal";
 import { DashboardLayout } from "@/components/templates/DashboardLayout";
 import {
+  addHouseholdMember,
   createLostPassSupportCase,
   getMyHouseholdDashboard,
 } from "@/lib/api/households";
-import type { HouseholdDashboardResponse } from "@/lib/api/types";
+import type { AddHouseholdMemberPayload, HouseholdDashboardResponse, RegisterMemberType } from "@/lib/api/types";
 
 type FlashMessage = {
   message: string;
@@ -41,8 +43,7 @@ function buildSummaryItems(data: HouseholdDashboardResponse) {
   return [
     `Bonjour ${data.manager.firstName}`,
     `${data.summary.membersCount} profils suivis`,
-    `${data.summary.renewalsCount} renouvellement conseille`,
-    `${data.summary.offersToCheckCount} offre a verifier`,
+    `${data.summary.offersToCheckCount} offre a etudier`,
     `${data.summary.urgentActionsCount} action urgente`,
   ];
 }
@@ -72,6 +73,9 @@ function FamilyDashboardPageContent() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [flash, setFlash] = useState<FlashMessage | null>(null);
   const [isLostPassOpen, setIsLostPassOpen] = useState(false);
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [addMemberType, setAddMemberType] = useState<RegisterMemberType>("YOUNG");
+  const [isSubmittingAddMember, setIsSubmittingAddMember] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>(undefined);
   const [isSubmittingLostPass, setIsSubmittingLostPass] = useState(false);
   const activeTab = getActiveTab(searchParams.get("tab"));
@@ -161,18 +165,14 @@ function FamilyDashboardPageContent() {
 
   function handleSelectProfile(profileType: string) {
     if (profileType === "young") {
-      setFlash({
-        message: "Le parcours enfant / jeune est deja couvert par Lucas dans cette demo.",
-        tone: "blue",
-      });
+      setAddMemberType("YOUNG");
+      setIsAddMemberOpen(true);
       return;
     }
 
     if (profileType === "senior") {
-      setFlash({
-        message: "Le parcours retraite / senior sera branche sur un vrai profil des qu'il sera ajoute au foyer.",
-        tone: "blue",
-      });
+      setAddMemberType("SENIOR");
+      setIsAddMemberOpen(true);
       return;
     }
 
@@ -180,6 +180,37 @@ function FamilyDashboardPageContent() {
       message: "Cette cible sera disponible prochainement dans le compte famille.",
       tone: "orange",
     });
+  }
+
+  async function handleAddMemberSubmit(payload: AddHouseholdMemberPayload) {
+    const accessToken = localStorage.getItem("familyAccessToken");
+
+    if (!accessToken) {
+      setFlash({ message: "Reconnectez-vous pour ajouter un profil au foyer.", tone: "red" });
+      return;
+    }
+
+    setIsSubmittingAddMember(true);
+
+    try {
+      const updatedDashboard = await addHouseholdMember(accessToken, payload);
+
+      startTransition(() => {
+        setData(updatedDashboard);
+        setFlash({
+          message: `${payload.firstName} ${payload.lastName} a ete ajoute au foyer.`,
+          tone: "green",
+        });
+        setIsAddMemberOpen(false);
+      });
+    } catch (error) {
+      setFlash({
+        message: error instanceof Error ? error.message : "Impossible d'ajouter ce profil pour le moment.",
+        tone: "red",
+      });
+    } finally {
+      setIsSubmittingAddMember(false);
+    }
   }
 
   function renderActiveSection() {
@@ -199,10 +230,10 @@ function FamilyDashboardPageContent() {
         return (
           <FamilyMembersSection
             cardsId="titles-grid"
-            description="Retrouvez l'etat des abonnements, les renouvellements conseilles et les prochaines actions pour chaque profil."
+            description="Aucun titre n'est rattache automatiquement : choisissez une offre ou ajoutez un titre uniquement quand la demarche est lancee."
             members={data.members}
             sectionId="titles"
-            title="Titres du foyer"
+            title="Titres et offres du foyer"
           />
         );
       case "services":
@@ -270,6 +301,16 @@ function FamilyDashboardPageContent() {
           members={data?.members ?? []}
           onClose={() => setIsLostPassOpen(false)}
           onSubmit={handleLostPassSubmit}
+        />
+      ) : null}
+
+      {isAddMemberOpen ? (
+        <AddHouseholdMemberModal
+          initialType={addMemberType}
+          isOpen={isAddMemberOpen}
+          isSubmitting={isSubmittingAddMember}
+          onClose={() => setIsAddMemberOpen(false)}
+          onSubmit={handleAddMemberSubmit}
         />
       ) : null}
     </DashboardLayout>

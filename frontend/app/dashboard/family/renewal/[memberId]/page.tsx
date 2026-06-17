@@ -20,7 +20,7 @@ export default function RenewalPlaceholderPage() {
 
     if (!accessToken) {
       queueMicrotask(() => {
-        setLoadError("Connectez-vous pour charger ce renouvellement.");
+        setLoadError("Connectez-vous pour charger ce parcours d'offre.");
       });
       return;
     }
@@ -37,14 +37,14 @@ export default function RenewalPlaceholderPage() {
         breadcrumbs={[
           { href: "/", label: "Accueil" },
           { href: "/dashboard/family", label: "Mon foyer Navigo" },
-          { label: "Renouvellement" },
+          { label: "Choix d'offre" },
         ]}
-        subtitle="Un parcours de renouvellement simple, anticipe pour la rentree et prepare les justificatifs utiles."
-        summaryItems={["Chargement du renouvellement"]}
-        title="Renouvellement"
+        subtitle="Un parcours pour choisir une offre adaptee avant toute souscription."
+        summaryItems={["Chargement du parcours"]}
+        title="Choisir une offre"
         userName="Mon espace"
       >
-        <InfoBox tone={loadError ? "orange" : "blue"}>{loadError ?? "Chargement du renouvellement..."}</InfoBox>
+        <InfoBox tone={loadError ? "orange" : "blue"}>{loadError ?? "Chargement du parcours..."}</InfoBox>
       </DashboardLayout>
     );
   }
@@ -57,40 +57,40 @@ export default function RenewalPlaceholderPage() {
       breadcrumbs={[
         { href: "/", label: "Accueil" },
         { href: "/dashboard/family", label: "Mon foyer Navigo" },
-        { label: "Renouvellement" },
+        { label: "Choix d'offre" },
       ]}
-      subtitle="Un parcours de renouvellement simple, anticipe pour la rentree et prepare les justificatifs utiles."
-      summaryItems={[member.firstName, member.currentProduct ?? "Titre a renouveler"]}
-      title={`Renouvellement de ${member.firstName}`}
+      subtitle="Aucun titre n'est rattache automatiquement. Cette étape aide à choisir l'offre avant souscription."
+      summaryItems={[member.firstName, "Aucun titre rattache"]}
+      title={`Choisir une offre pour ${member.firstName}`}
       userName={detail.manager.firstName ?? "Mon espace"}
     >
       <div className="grid gap-6">
         <InfoBox tone="orange">
-          Ce parcours est un placeholder credibile pour la demo. La logique complete de paiement et d&apos;upload documentaire viendra ensuite.
+          Ce parcours est un placeholder crédible pour la démo. La souscription réelle, le paiement et l&apos;upload documentaire viendront ensuite.
         </InfoBox>
 
         <section className="grid gap-4 lg:grid-cols-3">
           <article className="rounded-2xl border border-neutral-light bg-white p-5 shadow-sm">
             <p className="text-sm font-semibold uppercase tracking-wide text-idfm-interaction">Etape 1</p>
-            <h2 className="mt-3 text-xl font-bold text-idfm-anthracite">Verifier le profil</h2>
+            <h2 className="mt-3 text-xl font-bold text-idfm-anthracite">Vérifier le profil</h2>
             <p className="mt-2 text-sm leading-6 text-neutral-medium">
-              Controlez les informations du porteur, la photo et le lien payeur / porteur.
+              Contrôlez les informations du profil avant de proposer une offre adaptée.
             </p>
           </article>
 
           <article className="rounded-2xl border border-neutral-light bg-white p-5 shadow-sm">
             <p className="text-sm font-semibold uppercase tracking-wide text-idfm-interaction">Etape 2</p>
-            <h2 className="mt-3 text-xl font-bold text-idfm-anthracite">Preparer les justificatifs</h2>
+            <h2 className="mt-3 text-xl font-bold text-idfm-anthracite">Préparer les justificatifs</h2>
             <p className="mt-2 text-sm leading-6 text-neutral-medium">
-              Photo recente, certificat scolaire et pieces complementaires selon le dossier.
+              Photo récente, certificat scolaire ou pièces complémentaires selon l'offre retenue.
             </p>
           </article>
 
           <article className="rounded-2xl border border-neutral-light bg-white p-5 shadow-sm">
             <p className="text-sm font-semibold uppercase tracking-wide text-idfm-interaction">Etape 3</p>
-            <h2 className="mt-3 text-xl font-bold text-idfm-anthracite">Valider la demande</h2>
+            <h2 className="mt-3 text-xl font-bold text-idfm-anthracite">Lancer la souscription</h2>
             <p className="mt-2 text-sm leading-6 text-neutral-medium">
-              Confirmation du dossier, suivi des delais et relances utiles avant la rentree.
+              La création du titre ne démarre qu'après validation explicite du dossier.
             </p>
           </article>
         </section>

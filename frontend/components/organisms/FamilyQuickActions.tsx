@@ -30,8 +30,8 @@ export function FamilyQuickActions({
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {youngMember ? (
           <QuickActionCard
-            title="Renouveler un titre"
-            description="Relancer rapidement le dossier Imagine R de Lucas avant la rentree."
+            title="Trouver une offre jeune"
+            description="Comparer les offres adaptees au profil avant de rattacher un titre."
             href={`/dashboard/family/renewal/${youngMember.id}`}
             imageSrc="/assets/logos/pictogrammes/weekly-pass-card.png"
           />
@@ -44,7 +44,7 @@ export function FamilyQuickActions({
         />
         <QuickActionCard
           title="Consulter mes profils"
-          description="Retrouvez rapidement les titres, statuts et actions associees aux profils de votre foyer."
+          description="Retrouvez rapidement les profils, statuts et prochaines actions de votre foyer."
           href="/dashboard/family?tab=profiles"
           imageSrc="/assets/logos/pictogrammes/family-pictogram.png"
         />

@@ -69,7 +69,7 @@ export function AddMemberPanel({ onSelectProfile }: AddMemberPanelProps) {
             imageSrc={option.imageSrc}
             onClick={() => onSelectProfile(option.key)}
             title={option.title}
-            action={option.badge === "Actif" ? "Explorer" : "Bientot disponible"}
+            action={option.badge === "Actif" ? "Ajouter" : "Bientot disponible"}
           />
         ))}
       </div>

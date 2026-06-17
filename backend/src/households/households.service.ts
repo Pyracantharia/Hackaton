@@ -1,7 +1,9 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
+import { AddHouseholdMemberDto } from "./dtos/add-household-member.dto";
 
 type DashboardStatus =
+  | "NO_SUBSCRIPTION"
   | "ACTIVE"
   | "TO_RENEW"
   | "RECOMMENDED"
@@ -112,29 +114,38 @@ export class HouseholdsService {
     return "OTHER" as const;
   }
 
-  private getDefaultSubscription(profileType: DashboardMember["profileType"]) {
+  private getDefaultProfileState(profileType: DashboardMember["profileType"]) {
     if (profileType === "MANAGER") {
       return {
-        currentProduct: "Navigo Annuel",
+        currentProduct: null,
         recommendedProduct: null,
-        status: "ACTIVE" as const,
-        nextAction: "Voir mon titre",
+        status: "NO_SUBSCRIPTION" as const,
+        nextAction: "Aucun titre rattaché pour le moment",
       };
     }
 
     if (profileType === "YOUNG") {
       return {
-        currentProduct: "Imagine R Scolaire",
+        currentProduct: null,
         recommendedProduct: null,
-        status: "TO_RENEW" as const,
-        nextAction: "Renouveler avant la rentrée",
+        status: "NO_SUBSCRIPTION" as const,
+        nextAction: "Trouver le forfait adapté",
+      };
+    }
+
+    if (profileType === "SENIOR") {
+      return {
+        currentProduct: null,
+        recommendedProduct: null,
+        status: "NO_SUBSCRIPTION" as const,
+        nextAction: "Vérifier les offres adaptées",
       };
     }
 
     return {
-      currentProduct: "Titre à définir",
+      currentProduct: null,
       recommendedProduct: null,
-      status: "ACTIVE" as const,
+      status: "NO_SUBSCRIPTION" as const,
       nextAction: "Voir le profil",
     };
   }
@@ -163,8 +174,7 @@ export class HouseholdsService {
     managerName: string,
   ): DashboardMember {
     const profileType = this.getEffectiveProfileType(member);
-    const subscription = member.subscriptions[0];
-    const defaults = this.getDefaultSubscription(profileType);
+    const defaults = this.getDefaultProfileState(profileType);
     const hasOpenLostPass = member.supportCases.some(
       (supportCase) => supportCase.type === "LOST_PASS" && supportCase.status !== "RESOLVED",
     );
@@ -185,10 +195,10 @@ export class HouseholdsService {
       relationship: member.relationship,
       relationLabel,
       profileType,
-      currentProduct: subscription?.productName ?? defaults.currentProduct,
-      recommendedProduct: subscription?.recommendedProduct ?? defaults.recommendedProduct,
-      status: hasOpenLostPass ? "LOST" : (subscription?.status ?? defaults.status),
-      nextAction: hasOpenLostPass ? "Suivre la demande de remplacement" : (subscription?.nextActionLabel ?? defaults.nextAction),
+      currentProduct: defaults.currentProduct,
+      recommendedProduct: defaults.recommendedProduct,
+      status: hasOpenLostPass ? "LOST" : defaults.status,
+      nextAction: hasOpenLostPass ? "Suivre la demande de remplacement" : defaults.nextAction,
       payerName: member.isPayer ? `${member.firstName} ${member.lastName}` : managerName,
       isHolder: member.isHolder,
       isPayer: member.isPayer,
@@ -225,6 +235,43 @@ export class HouseholdsService {
 
   private formatActionVariant(variant: "PRIMARY" | "SECONDARY" | "GHOST") {
     return variant.toLowerCase() as "primary" | "secondary" | "ghost";
+  }
+
+  private getMemberCreationConfig(member: AddHouseholdMemberDto, managerName: string) {
+    const isYoung = member.type === "YOUNG";
+
+    return {
+      activityLabel: isYoung
+        ? `Profil jeune ajoute pour ${member.firstName}, sans titre rattache.`
+        : `Offre Senior a verifier pour ${member.firstName}.`,
+      detail: {
+        householdRole: isYoung ? "Porteur du titre scolaire" : "Profil senior accompagne",
+        overview: isYoung
+          ? `${member.firstName} n'a pas encore de titre rattache. Vous pourrez choisir une offre adaptee a son profil.`
+          : `${member.firstName} pourra verifier une offre Navigo Senior ou Amethyste adaptee a sa situation.`,
+        supportNote: isYoung
+          ? `Payeur : ${managerName}. Documents attendus : photo recente et certificat scolaire.`
+          : `Gestionnaire : ${managerName}. Les justificatifs dependront de l'offre retenue.`,
+        documents: isYoung
+          ? ["Photo recente", "Certificat scolaire", "Piece d'identite si demandee"]
+          : ["Piece d'identite", "Justificatif de domicile", "Justificatif de situation si demande"],
+      },
+      notification: isYoung
+        ? {
+            type: "OFFER_RECOMMENDATION" as const,
+            severity: "INFO" as const,
+            title: `${member.firstName} — Forfait jeune a choisir`,
+            message:
+              "Aucun titre n'est encore rattache. Vous pourrez comparer les offres jeune adaptees a son profil.",
+          }
+        : {
+            type: "OFFER_RECOMMENDATION" as const,
+            severity: "INFO" as const,
+            title: `${member.firstName} — Offre Senior a verifier`,
+            message:
+              "Un accompagnement peut aider a identifier l'offre Navigo Senior ou Amethyste adaptee.",
+          },
+    };
   }
 
   private buildMemberDetail(
@@ -294,7 +341,7 @@ export class HouseholdsService {
         membersCount: members.length,
         urgentActionsCount: members.filter((member) => member.status === "TO_RENEW" || member.status === "LOST").length,
         renewalsCount: members.filter((member) => member.status === "TO_RENEW").length,
-        offersToCheckCount: members.filter((member) => member.status === "RECOMMENDED").length,
+        offersToCheckCount: members.filter((member) => member.profileType !== "MANAGER" && member.status === "NO_SUBSCRIPTION").length,
       },
       members,
       notifications,
@@ -330,5 +377,93 @@ export class HouseholdsService {
       ...detail,
       alerts: notifications.filter((notification) => notification.memberId === member.id || notification.memberId === null),
     };
+  }
+
+  async addHouseholdMemberForUser(userId: string, data: AddHouseholdMemberDto) {
+    if (data.type === "YOUNG" && !data.schoolLevel) {
+      throw new BadRequestException("Le niveau scolaire est obligatoire pour ajouter un enfant / jeune.");
+    }
+
+    const household = await this.findHouseholdRecordForUser(userId);
+    const managerName = `${household.owner.firstName} ${household.owner.lastName}`.trim();
+    const config = this.getMemberCreationConfig(data, managerName);
+
+    await this.prismaService.$transaction(async (tx) => {
+      const member = await tx.householdMember.create({
+        data: {
+          householdId: household.id,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          birthDate: new Date(data.birthDate),
+          relationship: data.type === "YOUNG" ? "CHILD" : "RELATIVE",
+          profileType: data.type,
+          schoolLevel: data.type === "YOUNG" ? data.schoolLevel : null,
+          department: data.department,
+          isHolder: data.isHolder,
+          isPayer: data.isPayer,
+          isLegalRepresentative: false,
+        },
+      });
+
+      await tx.familyNotification.create({
+        data: {
+          householdId: household.id,
+          memberId: member.id,
+          ...config.notification,
+        },
+      });
+
+      await tx.householdActivity.create({
+        data: {
+          householdId: household.id,
+          memberId: member.id,
+          label: config.activityLabel,
+        },
+      });
+
+      await tx.memberProfileDetail.create({
+        data: {
+          householdMemberId: member.id,
+          householdRole: config.detail.householdRole,
+          overview: config.detail.overview,
+          supportNote: config.detail.supportNote,
+          accessibilityNote: null,
+          documents: config.detail.documents,
+          actions: {
+            create: data.type === "YOUNG"
+              ? [
+                  {
+                    label: "Trouver une offre adaptee",
+                    href: `/dashboard/family/renewal/${member.id}`,
+                    variant: "PRIMARY",
+                    order: 1,
+                  },
+                  {
+                    label: "Voir les justificatifs",
+                    href: `/dashboard/family/members/${member.id}#documents`,
+                    variant: "SECONDARY",
+                    order: 2,
+                  },
+                ]
+              : [
+                  {
+                    label: "Verifier l'offre adaptee",
+                    href: `/dashboard/family/members/${member.id}#eligibilite`,
+                    variant: "PRIMARY",
+                    order: 1,
+                  },
+                  {
+                    label: "Voir le profil",
+                    href: `/dashboard/family/members/${member.id}`,
+                    variant: "SECONDARY",
+                    order: 2,
+                  },
+                ],
+          },
+        },
+      });
+    });
+
+    return this.getDashboardForUser(userId);
   }
 }

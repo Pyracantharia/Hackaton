@@ -1,5 +1,6 @@
 import { buildApiUrl } from "../api";
 import type {
+  AddHouseholdMemberPayload,
   FoundPassPayload,
   FoundPassResponse,
   HouseholdDashboardResponse,
@@ -46,6 +47,26 @@ export async function getHouseholdMemberDetail(
   }
 
   return response.json() as Promise<MemberDetailResponse>;
+}
+
+export async function addHouseholdMember(
+  accessToken: string,
+  payload: AddHouseholdMemberPayload,
+): Promise<HouseholdDashboardResponse> {
+  const response = await fetch(buildApiUrl("/api/households/me/members"), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json() as Promise<HouseholdDashboardResponse>;
 }
 
 export async function createLostPassSupportCase(

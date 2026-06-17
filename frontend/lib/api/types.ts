@@ -1,5 +1,23 @@
 export type SchoolLevel = "PRIMARY" | "COLLEGE" | "LYCEE" | "HIGHER_EDUCATION" | "OTHER";
 export type IdfDepartment = "75" | "77" | "78" | "91" | "92" | "93" | "94" | "95";
+export type RegisterMemberType = "YOUNG" | "SENIOR";
+export type RegisterMemberRelationship = "CHILD" | "RELATIVE";
+export type SeniorRelationship = "PARENT" | "GRAND_PARENT" | "SPOUSE" | "CAREGIVER" | "OTHER";
+
+export type RegisterFamilyMemberPayload = {
+  type: RegisterMemberType;
+  relationship: RegisterMemberRelationship;
+  firstName: string;
+  lastName: string;
+  birthDate: string;
+  department: IdfDepartment;
+  schoolLevel?: SchoolLevel;
+  seniorRelationship?: SeniorRelationship;
+  isHolder: boolean;
+  isPayer: boolean;
+};
+
+export type AddHouseholdMemberPayload = RegisterFamilyMemberPayload;
 
 export type RegisterFamilyPayload = {
   parent: {
@@ -9,13 +27,14 @@ export type RegisterFamilyPayload = {
     phone: string;
     password: string;
   };
-  child: {
+  child?: {
     firstName: string;
     lastName: string;
     birthDate: string;
     schoolLevel: SchoolLevel;
     department: IdfDepartment;
   };
+  members: RegisterFamilyMemberPayload[];
   roles: {
     parentIsLegalRepresentative: boolean;
     parentIsPayer: boolean;
@@ -78,6 +97,7 @@ export type LoginResponse = {
 export type DashboardMemberProfileType = "MANAGER" | "YOUNG" | "SENIOR" | "OTHER";
 
 export type DashboardMemberStatus =
+  | "NO_SUBSCRIPTION"
   | "ACTIVE"
   | "TO_RENEW"
   | "RECOMMENDED"
