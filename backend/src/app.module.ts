@@ -5,6 +5,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { HouseholdsModule } from './households/households.module';
 import { SupportCasesModule } from './support-cases/support-cases.module';
+import { TitlesModule } from './titles/titles.module';
+import { SubscriptionRequestsModule } from './subscription-requests/subscription-requests.module';
 
 @Module({
   imports: [
@@ -12,6 +14,8 @@ import { SupportCasesModule } from './support-cases/support-cases.module';
     AuthModule,
     HouseholdsModule,
     SupportCasesModule,
+    TitlesModule,
+    SubscriptionRequestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

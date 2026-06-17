@@ -32,7 +32,7 @@ export function FamilyQuickActions({
           <QuickActionCard
             title="Trouver une offre jeune"
             description="Comparer les offres adaptees au profil avant de rattacher un titre."
-            href={`/dashboard/family/renewal/${youngMember.id}`}
+            href={`/dashboard/family/titles/recommendation?memberId=${youngMember.id}`}
             imageSrc="/assets/logos/pictogrammes/weekly-pass-card.png"
           />
         ) : null}

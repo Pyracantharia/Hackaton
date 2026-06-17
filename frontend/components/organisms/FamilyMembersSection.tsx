@@ -38,14 +38,14 @@ function getMemberBadges(member: DashboardMember) {
 
 function getPrimaryAction(member: DashboardMember) {
   if (member.profileType === "YOUNG") {
-    return `/dashboard/family/renewal/${member.id}`;
+    return `/dashboard/family/titles/recommendation?memberId=${member.id}`;
   }
 
   if (member.profileType === "SENIOR") {
     return `/dashboard/family/members/${member.id}`;
   }
 
-  return "/dashboard/family?tab=titles";
+  return "/dashboard/family/titles";
 }
 
 function getPrimaryLabel(member: DashboardMember) {

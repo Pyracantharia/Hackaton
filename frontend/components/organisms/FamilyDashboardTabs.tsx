@@ -6,7 +6,8 @@ type FamilyDashboardTabsProps = {
 };
 
 const tabs = [
-  { id: "overview", label: "Vue d'ensemble", icon: "/assets/iconparcours/svgexport-2.svg" },
+  { id: "welcome", label: "Bienvenue", icon: "/assets/iconparcours/svgexport-2.svg" },
+  { id: "overview", label: "Vue d'ensemble", icon: "/assets/iconparcours/svgexport-1.svg" },
   { id: "profiles", label: "Profils", icon: "/assets/iconparcours/Femme.svg" },
   { id: "titles", label: "Titres", icon: "/assets/iconparcours/svgexport-3.svg" },
   { id: "services", label: "Services", icon: "/assets/iconparcours/svgexport-5.svg" },
@@ -15,8 +16,12 @@ const tabs = [
 ];
 
 function buildTabHref(basePath: string, tabId: string) {
-  if (tabId === "overview") {
+  if (tabId === "welcome") {
     return basePath;
+  }
+
+  if (tabId === "titles") {
+    return `${basePath}/titles`;
   }
 
   const separator = basePath.includes("?") ? "&" : "?";

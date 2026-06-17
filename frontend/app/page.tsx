@@ -245,7 +245,7 @@ export default function Home() {
           />
           <QuickActionCard
             description="Retrouver les titres a renouveler et les dossiers en cours."
-            href="/dashboard/family?tab=titles"
+            href="/dashboard/family/titles"
             imageSrc="/assets/illustrations/navigo-card-vertical.png"
             title="Renouveler un titre"
           />

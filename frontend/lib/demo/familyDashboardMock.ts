@@ -8,6 +8,9 @@ const manager: DashboardMember = {
   id: "demo-manager",
   firstName: "Sophie",
   lastName: "Martin",
+  birthDate: null,
+  schoolLevel: null,
+  department: "75",
   relationship: "SELF",
   relationLabel: "Gestionnaire du foyer",
   profileType: "MANAGER",
@@ -26,6 +29,9 @@ const youngMember: DashboardMember = {
   id: "demo-lucas",
   firstName: "Lucas",
   lastName: "Martin",
+  birthDate: "2014-09-12",
+  schoolLevel: "COLLEGE",
+  department: "94",
   relationship: "CHILD",
   relationLabel: "Enfant / jeune",
   profileType: "YOUNG",
@@ -144,7 +150,7 @@ export function getDemoMemberDetail(memberId: string): MemberDetailResponse {
     actions: [
       {
         label: "Trouver une offre adaptee",
-        href: `/dashboard/family/renewal/${member.id}`,
+        href: `/dashboard/family/titles/recommendation?memberId=${member.id}`,
         variant: "primary",
       },
       {
