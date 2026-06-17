@@ -16,6 +16,7 @@ type DashboardLayoutProps = {
   breadcrumbs: BreadcrumbItem[];
   children: ReactNode;
   showTabs?: boolean;
+  showHeaderAction?: boolean;
   subtitle: string;
   summaryItems?: string[];
   title: string;
@@ -44,6 +45,7 @@ export function DashboardLayout({
   basePath = "/dashboard/family",
   breadcrumbs,
   children,
+  showHeaderAction = true,
   showTabs = true,
   subtitle,
   summaryItems,
@@ -125,11 +127,11 @@ export function DashboardLayout({
 
         <div className="mt-6">
           <FamilyDashboardHeader
-            action={
-              <Link href="/dashboard/family?tab=help" className="contents">
-                <Button type="button" variant="secondary">Gerer mes informations</Button>
-              </Link>
-            }
+            action={showHeaderAction ? (
+                <Link href="/dashboard/family?tab=help" className="contents">
+                  <Button type="button" variant="secondary">Gerer mes informations</Button>
+                </Link>
+              ) : undefined}
             subtitle={subtitle}
             summaryItems={summaryItems}
             title={title}

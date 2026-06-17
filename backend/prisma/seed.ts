@@ -13,9 +13,28 @@ if (!databaseUrl) {
 const pool = new Pool({ connectionString: databaseUrl });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
+const demoUserPassword = "Password123!";
+const adminPassword = "Admin123!";
+
+const adminAccounts = [
+  {
+    email: "admin.demo@example.com",
+    firstName: "Admin",
+    lastName: "Demo",
+    phone: "0600000001",
+  },
+  {
+    email: "operations.admin@example.com",
+    firstName: "Operations",
+    lastName: "Admin",
+    phone: "0600000002",
+  },
+];
+
 async function main() {
   const email = "sophie.martin@example.com";
-  const passwordHash = await argon2.hash("Password123!");
+  const passwordHash = await argon2.hash(demoUserPassword);
+  const adminPasswordHash = await argon2.hash(adminPassword);
 
   const existingUser = await prisma.user.findUnique({
     where: { email },
@@ -219,7 +238,33 @@ async function main() {
     ],
   });
 
+  for (const admin of adminAccounts) {
+    await prisma.user.upsert({
+      where: { email: admin.email },
+      update: {
+        firstName: admin.firstName,
+        lastName: admin.lastName,
+        phone: admin.phone,
+        passwordHash: adminPasswordHash,
+        role: "ADMIN",
+        phoneVerified: true,
+        emailVerified: true,
+      },
+      create: {
+        firstName: admin.firstName,
+        lastName: admin.lastName,
+        email: admin.email,
+        phone: admin.phone,
+        passwordHash: adminPasswordHash,
+        role: "ADMIN",
+        phoneVerified: true,
+        emailVerified: true,
+      },
+    });
+  }
+
   console.log(`Seeded demo household for ${email}`);
+  console.log(`Seeded ${adminAccounts.length} admin accounts with password ${adminPassword}`);
 }
 
 main()

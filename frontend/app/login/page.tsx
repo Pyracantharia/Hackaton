@@ -49,7 +49,7 @@ export default function LoginPage() {
       const response = await login({ email, password });
       localStorage.setItem("familyAccessToken", response.accessToken);
       sessionStorage.setItem("familyUser", JSON.stringify(response.user));
-      router.push("/dashboard/family");
+      router.push(response.user.role === "ADMIN" ? "/dashboard/admin" : "/dashboard/family");
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Connexion impossible pour le moment.");
     } finally {

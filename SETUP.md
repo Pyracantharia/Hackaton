@@ -18,6 +18,12 @@
 
 - Lancer la commande `docker exec -it backend npx prisma db seed`
 
+### Comptes de démo
+
+- Client famille : `sophie.martin@example.com` / `Password123!`
+- Admin : `admin.demo@example.com` / `Admin123!`
+- Admin opérations : `operations.admin@example.com` / `Admin123!`
+
 ### Pour le front
 
 - Lancer la commande `npm run dev`
