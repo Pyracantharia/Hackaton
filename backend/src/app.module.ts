@@ -7,6 +7,7 @@ import { HouseholdsModule } from './households/households.module';
 import { SupportCasesModule } from './support-cases/support-cases.module';
 import { TitlesModule } from './titles/titles.module';
 import { SubscriptionRequestsModule } from './subscription-requests/subscription-requests.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { SubscriptionRequestsModule } from './subscription-requests/subscription
     SupportCasesModule,
     TitlesModule,
     SubscriptionRequestsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

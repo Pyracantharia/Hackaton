@@ -211,6 +211,14 @@ async function main() {
     include: { households: true },
   });
 
+  await prisma.supportCase.deleteMany({
+    where: {
+      householdId: null,
+      type: "FOUND_PASS",
+      passNumberMasked: "********1234",
+    },
+  });
+
   if (existingUser) {
     await prisma.consent.deleteMany({ where: { userId: existingUser.id } });
     await prisma.household.deleteMany({ where: { ownerId: existingUser.id } });
@@ -444,6 +452,108 @@ async function main() {
       { userId: user.id, type: "MOBILITY_NEWS", accepted: false },
       { userId: user.id, type: "PARTNER_OFFERS", accepted: false },
     ],
+  });
+
+  const imagineRScolaire = await prisma.productOffer.findUnique({
+    where: { slug: "imagine-r-scolaire" },
+    include: { requiredDocuments: { orderBy: { order: "asc" } } },
+  });
+  const navigoSenior = await prisma.productOffer.findUnique({
+    where: { slug: "navigo-senior" },
+    include: { requiredDocuments: { orderBy: { order: "asc" } } },
+  });
+
+  if (imagineRScolaire) {
+    await prisma.subscriptionRequest.create({
+      data: {
+        householdId: household.id,
+        memberId: child.id,
+        payerMemberId: manager.id,
+        offerId: imagineRScolaire.id,
+        status: "UNDER_REVIEW",
+        intelligentDossierEnabled: true,
+        autoRenewalEnabled: true,
+        createdAt: new Date("2026-06-16T10:00:00.000Z"),
+        documents: {
+          create: imagineRScolaire.requiredDocuments.map((document) => ({
+            documentType: document.documentType,
+            label: document.label,
+            status: "UNDER_REVIEW",
+          })),
+        },
+      },
+    });
+
+    await prisma.householdActivity.create({
+      data: {
+        householdId: household.id,
+        memberId: child.id,
+        label: "Demande Imagine R Scolaire créée pour Lucas.",
+        createdAt: new Date("2026-06-16T10:00:00.000Z"),
+      },
+    });
+  }
+
+  if (navigoSenior) {
+    await prisma.subscriptionRequest.create({
+      data: {
+        householdId: household.id,
+        memberId: senior.id,
+        payerMemberId: manager.id,
+        offerId: navigoSenior.id,
+        status: "WAITING_DOCUMENTS",
+        intelligentDossierEnabled: false,
+        autoRenewalEnabled: false,
+        createdAt: new Date("2026-06-16T10:30:00.000Z"),
+        documents: {
+          create: navigoSenior.requiredDocuments.map((document) => ({
+            documentType: document.documentType,
+            label: document.label,
+            status: "MISSING",
+          })),
+        },
+      },
+    });
+
+    await prisma.householdActivity.create({
+      data: {
+        householdId: household.id,
+        memberId: senior.id,
+        label: "Dossier senior à vérifier pour Marie.",
+        createdAt: new Date("2026-06-16T10:30:00.000Z"),
+      },
+    });
+  }
+
+  await prisma.supportCase.create({
+    data: {
+      householdId: household.id,
+      memberId: child.id,
+      type: "LOST_PASS",
+      status: "OPEN",
+      description: "Passe perdu déclaré depuis l'espace famille.",
+      createdAt: new Date("2026-06-16T11:00:00.000Z"),
+    },
+  });
+
+  await prisma.supportCase.create({
+    data: {
+      type: "FOUND_PASS",
+      status: "OPEN",
+      passNumberMasked: "********1234",
+      foundLocation: "Gare de Lyon - guichet services",
+      depositedAtDesk: true,
+      createdAt: new Date("2026-06-16T11:30:00.000Z"),
+    },
+  });
+
+  await prisma.householdActivity.create({
+    data: {
+      householdId: household.id,
+      memberId: child.id,
+      label: "Passe perdu déclaré pour Lucas.",
+      createdAt: new Date("2026-06-16T11:00:00.000Z"),
+    },
   });
 
   for (const admin of adminAccounts) {
