@@ -193,7 +193,7 @@ export default function RegisterPage() {
           "Vérifions vos coordonnées",
           "Composez votre foyer Navigo",
           "Qui utilise et qui paie le titre ?",
-          "Comment souhaitez-vous être accompagné ?",
+          "Vos alertes",
         ][currentStep];
 
   const subtitle = currentStep === 0
@@ -206,7 +206,7 @@ export default function RegisterPage() {
           "Pour sécuriser votre espace famille, nous vérifions votre téléphone et votre adresse e-mail.",
           "Ajoutez les personnes dont vous souhaitez gérer les titres de transport.",
           "Visualisez simplement la différence entre compte principal, payeur et porteur.",
-          "Choisissez les alertes et conseils utiles pour suivre les titres de votre foyer.",
+          "Gardez uniquement ce qui vous aide vraiment.",
         ][currentStep];
 
   const illustrationSrc =
