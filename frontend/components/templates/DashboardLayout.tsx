@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Button } from "../atoms/Button";
+import { AppNavbar } from "../organisms/AppNavbar";
 import { FamilyDashboardHeader } from "../organisms/FamilyDashboardHeader";
 import { FamilyDashboardTabs } from "../organisms/FamilyDashboardTabs";
 
@@ -15,6 +16,7 @@ type DashboardLayoutProps = {
   basePath?: string;
   breadcrumbs: BreadcrumbItem[];
   children: ReactNode;
+  greeting?: string;
   showTabs?: boolean;
   showHeaderAction?: boolean;
   subtitle: string;
@@ -22,8 +24,6 @@ type DashboardLayoutProps = {
   title: string;
   userName?: string;
 };
-
-const headerLinks = ["Me deplacer", "Tarifs", "Services", "Infos"];
 
 const footerColumns = [
   {
@@ -45,7 +45,7 @@ export function DashboardLayout({
   basePath = "/dashboard/family",
   breadcrumbs,
   children,
-  showHeaderAction = true,
+  greeting,
   showTabs = true,
   subtitle,
   summaryItems,
@@ -54,58 +54,7 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   return (
     <main className="min-h-screen bg-neutral-xlight">
-      <header className="border-b border-white/10 bg-idfm-anthracite text-white">
-        <div className="border-b border-white/10 px-5 py-2">
-          <div className="mx-auto flex max-w-7xl items-center justify-between text-xs">
-            <Link href="/" className="hover:underline">Qui sommes-nous ?</Link>
-            <div className="flex items-center gap-4">
-              <span>Points de vente</span>
-              <span>Aide et contacts</span>
-              <span>FR</span>
-            </div>
-          </div>
-        </div>
-        <div className="px-5 py-4">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-8">
-              <Link href="/">
-                <Image
-                  src="/assets/logos/idfm-wordmark-horizontal.png"
-                  alt="Ile-de-France Mobilites"
-                  width={176}
-                  height={42}
-                  className="h-10 w-auto"
-                />
-              </Link>
-              <nav className="hidden items-center gap-6 lg:flex">
-                {headerLinks.map((link) => (
-                  <button key={link} type="button" className="text-sm font-medium hover:text-idfm-blue">
-                    {link}
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                className="hidden min-h-11 rounded-xl border border-white/30 px-4 text-sm font-medium hover:bg-white/10 sm:inline-flex sm:items-center"
-              >
-                Recherche
-              </button>
-              {userName ? (
-                <span className="inline-flex min-h-11 items-center rounded-xl bg-white px-4 text-sm font-semibold text-idfm-interaction">
-                  {userName}
-                </span>
-              ) : (
-                <Link href="/login" className="contents">
-                  <Button type="button" variant="secondary">Mon espace</Button>
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppNavbar userName={userName} />
 
       <section className="mx-auto w-full max-w-7xl px-5 py-6">
         <nav aria-label="Fil d'ariane" className="text-sm text-neutral-medium">
@@ -127,11 +76,12 @@ export function DashboardLayout({
 
         <div className="mt-6">
           <FamilyDashboardHeader
-            action={showHeaderAction ? (
-                <Link href="/dashboard/family?tab=help" className="contents">
-                  <Button type="button" variant="secondary">Gerer mes informations</Button>
-                </Link>
-              ) : undefined}
+            action={
+              <Link href="/dashboard/family?tab=help" className="contents">
+                <Button type="button" variant="secondary">Gerer mes informations</Button>
+              </Link>
+            }
+            greeting={greeting}
             subtitle={subtitle}
             summaryItems={summaryItems}
             title={title}

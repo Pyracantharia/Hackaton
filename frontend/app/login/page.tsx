@@ -8,6 +8,7 @@ import { Button } from "@/components/atoms/Button";
 import { AuthCard } from "@/components/molecules/AuthCard";
 import { CreateAccountCard } from "@/components/molecules/CreateAccountCard";
 import { LoginForm } from "@/components/molecules/LoginForm";
+import { AppNavbar } from "@/components/organisms/AppNavbar";
 import { login } from "@/lib/api/auth";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -59,24 +60,7 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-neutral-xlight">
-      <header className="px-5 py-5">
-        <div className="mx-auto grid max-w-6xl grid-cols-3 items-center gap-3">
-          <button className="justify-self-start text-sm font-semibold text-idfm-interaction underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-idfm-focus" type="button">
-            Français
-          </button>
-          <Image
-            src="/assets/logos/idfm-connect-logo.svg"
-            alt="Île-de-France Mobilités Connect"
-            width={240}
-            height={48}
-            className="h-9 w-auto justify-self-center"
-            priority
-          />
-          <button className="justify-self-end text-sm font-semibold text-idfm-interaction underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-idfm-focus" type="button" onClick={() => setModal("help")}>
-            Aide
-          </button>
-        </div>
-      </header>
+      <AppNavbar />
 
       <section className="mx-auto w-full max-w-6xl px-5 pb-12 pt-6">
         <div className="mx-auto max-w-3xl text-center">

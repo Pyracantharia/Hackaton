@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 type FamilyDashboardHeaderProps = {
   action?: ReactNode;
+  greeting?: string;
   subtitle: string;
   summaryItems?: string[];
   title: string;
@@ -9,6 +10,7 @@ type FamilyDashboardHeaderProps = {
 
 export function FamilyDashboardHeader({
   action,
+  greeting,
   subtitle,
   summaryItems = [],
   title,
@@ -17,6 +19,9 @@ export function FamilyDashboardHeader({
     <section id="overview" className="rounded-[2rem] bg-idfm-light p-6 sm:p-8">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-3xl">
+          {greeting ? (
+            <p className="mb-2 text-base font-semibold text-idfm-interaction">{greeting}</p>
+          ) : null}
           <h1 className="text-4xl font-bold text-idfm-anthracite sm:text-5xl">{title}</h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-medium">{subtitle}</p>
         </div>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/components/atoms/Badge";
 import { InfoBox } from "@/components/molecules/InfoBox";
 import { QuickActionCard } from "@/components/molecules/QuickActionCard";
+import { AppNavbar } from "@/components/organisms/AppNavbar";
 
 const solutionItems = [
   {
@@ -101,31 +102,7 @@ function HomeCtaLink({
 export default function Home() {
   return (
     <main className="min-h-screen bg-neutral-xlight text-idfm-anthracite">
-      <header className="border-b border-white/10 bg-idfm-anthracite px-5 py-4 text-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-          <Link href="/" aria-label="Accueil Compte Famille Navigo">
-            <Image
-              src="/assets/logos/idfm-logo.svg"
-              alt="Ile-de-France Mobilites"
-              width={176}
-              height={42}
-              className="h-9 w-auto"
-              priority
-            />
-          </Link>
-          <nav className="hidden items-center gap-6 text-sm font-medium md:flex" aria-label="Navigation principale">
-            <a href="#solution" className="hover:text-idfm-blue">Notre solution</a>
-            <a href="#cibles" className="hover:text-idfm-blue">Cibles</a>
-            <a href="#actions" className="hover:text-idfm-blue">Actions utiles</a>
-          </nav>
-          <Link
-            href="/login"
-            className="inline-flex min-h-10 items-center rounded-md bg-white px-4 text-sm font-semibold text-idfm-interaction transition hover:bg-idfm-light focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-blue"
-          >
-            Mon espace
-          </Link>
-        </div>
-      </header>
+      <AppNavbar />
 
       <section className="mx-auto grid w-full max-w-7xl gap-10 px-5 py-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-16">
         <div>

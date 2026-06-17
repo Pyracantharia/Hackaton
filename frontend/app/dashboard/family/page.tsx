@@ -41,7 +41,6 @@ function getActiveTab(value: string | null): DashboardTabId {
 
 function buildSummaryItems(data: HouseholdDashboardResponse) {
   return [
-    `Bonjour ${data.manager.firstName}`,
     `${data.summary.membersCount} profils suivis`,
     `${data.summary.offersToCheckCount} offre a etudier`,
     `${data.summary.urgentActionsCount} action urgente`,
@@ -278,6 +277,7 @@ function FamilyDashboardPageContent() {
         { href: "/", label: "Accueil" },
         { label: "Mon foyer Navigo" },
       ]}
+      greeting={data ? `Bonjour ${data.manager.firstName}` : undefined}
       subtitle="Gerez les titres de votre foyer depuis un seul espace, avec des alertes, des profils et des actions adaptees a chaque situation."
       summaryItems={data ? buildSummaryItems(data) : ["Chargement du foyer"]}
       title="Mon foyer Navigo"
