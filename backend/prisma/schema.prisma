@@ -134,7 +134,15 @@ enum SupportCaseType {
 enum SupportCaseStatus {
   OPEN
   IN_PROGRESS
+  TRANSFER_TO_PHONE_REQUESTED
+  PASS_DEACTIVATION_REQUESTED
   RESOLVED
+  CANCELLED_BY_USER
+}
+
+enum SupportCaseResolution {
+  TRANSFER_TO_PHONE
+  DEACTIVATE_ONLY
 }
 
 enum MemberDetailActionVariant {
@@ -388,10 +396,14 @@ model SupportCase {
   member           HouseholdMember?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
   type             SupportCaseType
   status           SupportCaseStatus @default(OPEN)
+  reason           String?
+  chosenResolution SupportCaseResolution?
   description      String?
   passNumberMasked String?
   foundLocation    String?
   depositedAtDesk  Boolean?
+  cancelledAt      DateTime?
+  resolvedAt       DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 

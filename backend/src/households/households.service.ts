@@ -31,6 +31,7 @@ type DashboardMember = {
   isPayer: boolean;
   isLegalRepresentative: boolean;
   isDemoProfile: boolean;
+  hasActiveTitle: boolean;
 };
 
 type DashboardNotification = {
@@ -174,7 +175,13 @@ export class HouseholdsService {
       isLegalRepresentative: boolean;
       supportCases: Array<{
         type: "LOST_PASS" | "FOUND_PASS" | "DOCUMENT_REJECTED" | "PAYMENT_BLOCKED";
-        status: "OPEN" | "IN_PROGRESS" | "RESOLVED";
+        status:
+          | "OPEN"
+          | "IN_PROGRESS"
+          | "TRANSFER_TO_PHONE_REQUESTED"
+          | "PASS_DEACTIVATION_REQUESTED"
+          | "RESOLVED"
+          | "CANCELLED_BY_USER";
       }>;
       subscriptions: Array<{
         productName: string;
@@ -193,8 +200,13 @@ export class HouseholdsService {
   ): DashboardMember {
     const profileType = this.getEffectiveProfileType(member);
     const defaults = this.getDefaultProfileState(profileType);
+    const latestSubscription = member.subscriptions[0] ?? null;
+    const hasActiveTitle = Boolean(latestSubscription);
     const hasOpenLostPass = member.supportCases.some(
-      (supportCase) => supportCase.type === "LOST_PASS" && supportCase.status !== "RESOLVED",
+      (supportCase) =>
+        supportCase.type === "LOST_PASS" &&
+        supportCase.status !== "RESOLVED" &&
+        supportCase.status !== "CANCELLED_BY_USER",
     );
     const latestOpenRequest = member.subscriptionRequests.find(
       (request) => !["ACTIVE", "CANCELLED", "BLOCKED"].includes(request.status),
@@ -219,19 +231,18 @@ export class HouseholdsService {
       relationship: member.relationship,
       relationLabel,
       profileType,
-      currentProduct: defaults.currentProduct,
-      recommendedProduct: latestOpenRequest?.offer.name ?? defaults.recommendedProduct,
-      status: hasOpenLostPass ? "LOST" : latestOpenRequest ? "PENDING_DOCUMENT" : defaults.status,
+      currentProduct: latestSubscription?.productName ?? defaults.currentProduct,
+      recommendedProduct: latestSubscription?.recommendedProduct ?? defaults.recommendedProduct,
+      status: hasOpenLostPass ? "LOST" : (latestSubscription?.status ?? defaults.status),
       nextAction: hasOpenLostPass
         ? "Suivre la demande de remplacement"
-        : latestOpenRequest
-          ? "Demande de souscription en cours"
-          : defaults.nextAction,
+        : (latestSubscription?.nextActionLabel ?? defaults.nextAction),
       payerName: member.isPayer ? `${member.firstName} ${member.lastName}` : managerName,
       isHolder: member.isHolder,
       isPayer: member.isPayer,
       isLegalRepresentative: member.isLegalRepresentative,
       isDemoProfile: false,
+      hasActiveTitle,
     };
   }
 

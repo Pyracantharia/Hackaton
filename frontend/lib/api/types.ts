@@ -127,6 +127,7 @@ export type DashboardMember = {
   isPayer: boolean;
   isLegalRepresentative: boolean;
   isDemoProfile: boolean;
+  hasActiveTitle: boolean;
 };
 
 export type DashboardNotification = {
@@ -186,14 +187,69 @@ export type MemberDetailResponse = {
   alerts: DashboardNotification[];
 };
 
+export type LostPassReason = "LOST" | "STOLEN" | "DAMAGED" | "UNKNOWN";
+
+export type SupportCaseResolution = "TRANSFER_TO_PHONE" | "DEACTIVATE_ONLY";
+
+export type SupportCaseType = "LOST_PASS" | "FOUND_PASS" | "DOCUMENT_REJECTED" | "PAYMENT_BLOCKED";
+
+export type SupportCaseStatus =
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "TRANSFER_TO_PHONE_REQUESTED"
+  | "PASS_DEACTIVATION_REQUESTED"
+  | "RESOLVED"
+  | "CANCELLED_BY_USER";
+
 export type LostPassPayload = {
   memberId: string;
-  reason: string;
+  reason: LostPassReason;
+  chosenResolution: SupportCaseResolution;
+  understandsDeactivation: boolean;
 };
 
 export type LostPassResponse = {
   message: string;
-  supportCaseId: string;
+  supportCase: {
+    id: string;
+    type: SupportCaseType;
+    status: SupportCaseStatus;
+    dossierNumber: string;
+  };
+};
+
+export type SupportCaseSummary = {
+  id: string;
+  dossierNumber: string;
+  type: SupportCaseType;
+  status: SupportCaseStatus;
+  statusLabel: string;
+  nextStep: string;
+  reason: LostPassReason | null;
+  chosenResolution: SupportCaseResolution | null;
+  memberId: string | null;
+  memberName: string | null;
+  titleLabel: string | null;
+  passNumberMasked: string | null;
+  cancellable: boolean;
+  createdAt: string;
+  updatedAt: string;
+  cancelledAt: string | null;
+  resolvedAt: string | null;
+};
+
+export type SupportCaseDetail = SupportCaseSummary;
+
+export type SupportCasesListResponse = {
+  supportCases: SupportCaseSummary[];
+};
+
+export type CancelSupportCaseResponse = {
+  message: string;
+  supportCase: {
+    id: string;
+    status: SupportCaseStatus;
+  };
 };
 
 export type FoundPassPayload = {

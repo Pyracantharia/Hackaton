@@ -57,22 +57,32 @@ export function DashboardLayout({
       <AppNavbar userName={userName} />
 
       <section className="mx-auto w-full max-w-7xl px-5 py-6">
-        <nav aria-label="Fil d'ariane" className="text-sm text-neutral-medium">
-          <ol className="flex flex-wrap items-center gap-2">
-            {breadcrumbs.map((item, index) => (
-              <li key={`${item.label}-${index}`} className="flex items-center gap-2">
-                {item.href ? (
-                  <Link href={item.href} className="text-idfm-interaction hover:underline">
-                    {item.label}
-                  </Link>
-                ) : (
-                  <span>{item.label}</span>
-                )}
-                {index < breadcrumbs.length - 1 ? <span aria-hidden="true">›</span> : null}
-              </li>
-            ))}
-          </ol>
-        </nav>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <nav aria-label="Fil d'ariane" className="text-sm text-neutral-medium">
+            <ol className="flex flex-wrap items-center gap-2">
+              {breadcrumbs.map((item, index) => (
+                <li key={`${item.label}-${index}`} className="flex items-center gap-2">
+                  {item.href ? (
+                    <Link href={item.href} className="text-idfm-interaction hover:underline">
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <span>{item.label}</span>
+                  )}
+                  {index < breadcrumbs.length - 1 ? <span aria-hidden="true">›</span> : null}
+                </li>
+              ))}
+            </ol>
+          </nav>
+
+          <Link
+            href="/dashboard/family?tab=services#sos-navigo"
+            className="inline-flex min-h-10 items-center gap-2 rounded-full bg-idfm-interaction px-4 text-sm font-bold text-white shadow-sm transition hover:bg-idfm-interaction/90 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus"
+          >
+            <span aria-hidden="true">🆘</span>
+            SOS Navigo
+          </Link>
+        </div>
 
         <div className="mt-6">
           <FamilyDashboardHeader

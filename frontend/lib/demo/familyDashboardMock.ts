@@ -23,6 +23,7 @@ const manager: DashboardMember = {
   isPayer: true,
   isLegalRepresentative: true,
   isDemoProfile: false,
+  hasActiveTitle: false,
 };
 
 const youngMember: DashboardMember = {
@@ -44,6 +45,7 @@ const youngMember: DashboardMember = {
   isPayer: false,
   isLegalRepresentative: false,
   isDemoProfile: false,
+  hasActiveTitle: false,
 };
 
 export const familyDashboardMock: HouseholdDashboardResponse = {

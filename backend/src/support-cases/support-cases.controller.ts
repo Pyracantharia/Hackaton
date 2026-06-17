@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "src/auth/guards/jwt-auth.guard";
 import type { AuthenticatedRequest } from "src/auth/guards/jwt-auth.guard";
 import { CreateFoundPassDto } from "./dtos/create-found-pass.dto";
@@ -21,5 +21,23 @@ export class SupportCasesController {
   @Post("found-pass")
   async createFoundPass(@Body() body: CreateFoundPassDto) {
     return this.supportCasesService.createFoundPassCase(body);
+  }
+
+  @Get("me")
+  @UseGuards(JwtAuthGuard)
+  async getMyCases(@Req() request: AuthenticatedRequest) {
+    return this.supportCasesService.getMyCases(request.user.sub);
+  }
+
+  @Get(":id")
+  @UseGuards(JwtAuthGuard)
+  async getCaseById(@Req() request: AuthenticatedRequest, @Param("id") id: string) {
+    return this.supportCasesService.getCaseById(request.user.sub, id);
+  }
+
+  @Patch(":id/cancel")
+  @UseGuards(JwtAuthGuard)
+  async cancelCase(@Req() request: AuthenticatedRequest, @Param("id") id: string) {
+    return this.supportCasesService.cancelCase(request.user.sub, id);
   }
 }

@@ -7,13 +7,13 @@ import { Button } from "@/components/atoms/Button";
 import { InfoBox } from "@/components/molecules/InfoBox";
 import { ProfileSummaryCard } from "@/components/molecules/ProfileSummaryCard";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { LostPassModal } from "@/components/organisms/LostPassModal";
+import { LostPassFlow } from "@/components/organisms/LostPassFlow";
 import { DashboardLayout } from "@/components/templates/DashboardLayout";
 import {
   createLostPassSupportCase,
   getHouseholdMemberDetail,
 } from "@/lib/api/households";
-import type { MemberDetailResponse } from "@/lib/api/types";
+import type { LostPassPayload, LostPassResponse, MemberDetailResponse } from "@/lib/api/types";
 import { getProfileVisual } from "@/lib/member-visuals";
 
 export default function MemberDetailPage() {
@@ -24,6 +24,15 @@ export default function MemberDetailPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLostPassOpen, setIsLostPassOpen] = useState(false);
   const [isSubmittingLostPass, setIsSubmittingLostPass] = useState(false);
+
+  useEffect(() => {
+    if (!flash) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setFlash(null), 6000);
+    return () => window.clearTimeout(timeoutId);
+  }, [flash]);
 
   useEffect(() => {
     const accessToken = localStorage.getItem("familyAccessToken");
@@ -44,44 +53,40 @@ export default function MemberDetailPage() {
       });
   }, [memberId]);
 
-  async function handleLostPassSubmit(payload: { memberId: string; reason: string }) {
+  async function handleLostPassSubmit(payload: LostPassPayload): Promise<LostPassResponse> {
     const accessToken = localStorage.getItem("familyAccessToken");
-    if (!detail || !accessToken) {
-      setFlash({ message: "Impossible d'enregistrer la demande sans session active.", tone: "red" });
-      return;
+    if (!accessToken) {
+      throw new Error("Impossible d'enregistrer la demande sans session active.");
     }
 
     setIsSubmittingLostPass(true);
 
-    let message = "Demande de remplacement creee.";
-
     try {
       const response = await createLostPassSupportCase(accessToken, payload);
-      message = response.message;
-    } catch {
-      setFlash({ message: "La demande n'a pas pu etre enregistree pour le moment.", tone: "red" });
+      const isTransfer = payload.chosenResolution === "TRANSFER_TO_PHONE";
+
+      startTransition(() => {
+        setDetail((current) => (
+          current
+            ? {
+                ...current,
+                member: {
+                  ...current.member,
+                  status: isTransfer ? current.member.status : "LOST",
+                  nextAction: isTransfer
+                    ? "Titre disponible sur smartphone"
+                    : "Suivre la demande de remplacement",
+                },
+              }
+            : current
+        ));
+        setFlash({ message: response.message, tone: "green" });
+      });
+
+      return response;
+    } finally {
       setIsSubmittingLostPass(false);
-      return;
     }
-
-    startTransition(() => {
-      setDetail((current) => (
-        current
-          ? {
-              ...current,
-              member: {
-                ...current.member,
-                status: "LOST",
-                nextAction: "Suivre la demande de remplacement",
-              },
-            }
-          : current
-      ));
-      setFlash({ message, tone: "green" });
-      setIsLostPassOpen(false);
-    });
-
-    setIsSubmittingLostPass(false);
   }
 
   if (!detail) {
@@ -198,7 +203,7 @@ export default function MemberDetailPage() {
       </div>
 
       {isLostPassOpen ? (
-        <LostPassModal
+        <LostPassFlow
           defaultMemberId={detail.member.id}
           isOpen={isLostPassOpen}
           isSubmitting={isSubmittingLostPass}

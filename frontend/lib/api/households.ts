@@ -1,12 +1,15 @@
 import { buildApiUrl } from "../api";
 import type {
   AddHouseholdMemberPayload,
+  CancelSupportCaseResponse,
   FoundPassPayload,
   FoundPassResponse,
   HouseholdDashboardResponse,
   LostPassPayload,
   LostPassResponse,
   MemberDetailResponse,
+  SupportCaseDetail,
+  SupportCasesListResponse,
 } from "./types";
 
 async function parseApiError(response: Response) {
@@ -87,6 +90,57 @@ export async function createLostPassSupportCase(
   }
 
   return response.json() as Promise<LostPassResponse>;
+}
+
+export async function getMySupportCases(
+  accessToken: string,
+): Promise<SupportCasesListResponse> {
+  const response = await fetch(buildApiUrl("/api/support-cases/me"), {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json() as Promise<SupportCasesListResponse>;
+}
+
+export async function getSupportCaseDetail(
+  accessToken: string,
+  supportCaseId: string,
+): Promise<SupportCaseDetail> {
+  const response = await fetch(buildApiUrl(`/api/support-cases/${supportCaseId}`), {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json() as Promise<SupportCaseDetail>;
+}
+
+export async function cancelSupportCase(
+  accessToken: string,
+  supportCaseId: string,
+): Promise<CancelSupportCaseResponse> {
+  const response = await fetch(buildApiUrl(`/api/support-cases/${supportCaseId}/cancel`), {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json() as Promise<CancelSupportCaseResponse>;
 }
 
 export async function createFoundPassSupportCase(

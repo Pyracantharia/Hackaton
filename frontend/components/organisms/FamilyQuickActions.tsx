@@ -1,19 +1,14 @@
 import Link from "next/link";
 import { Button } from "../atoms/Button";
 import { FoundPassCta } from "../molecules/FoundPassCta";
-import { InfoBox } from "../molecules/InfoBox";
 import { QuickActionCard } from "../molecules/QuickActionCard";
 import type { DashboardMember } from "@/lib/api/types";
 
 type FamilyQuickActionsProps = {
   members: DashboardMember[];
-  onLostPassRequested: (memberId: string) => void;
 };
 
-export function FamilyQuickActions({
-  members,
-  onLostPassRequested,
-}: FamilyQuickActionsProps) {
+export function FamilyQuickActions({ members }: FamilyQuickActionsProps) {
   const youngMember = members.find((member) => member.profileType === "YOUNG");
 
   return (
@@ -48,22 +43,6 @@ export function FamilyQuickActions({
           href="/dashboard/family?tab=profiles"
           imageSrc="/assets/logos/pictogrammes/family-pictogram.png"
         />
-      </div>
-
-      <div className="mt-5">
-        <InfoBox>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="font-semibold text-idfm-anthracite">Declarer une carte perdue</p>
-              <p className="mt-1 text-sm text-neutral-medium">
-                Ouvrez le parcours puis choisissez le profil concerne pour lancer la demande.
-              </p>
-            </div>
-            <Button type="button" variant="secondary" onClick={() => onLostPassRequested(youngMember?.id ?? members[0]?.id ?? "")}>
-              Choisir le profil
-            </Button>
-          </div>
-        </InfoBox>
       </div>
 
       <div className="mt-5">

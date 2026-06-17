@@ -14,7 +14,7 @@ type QuickActionCardProps = {
 };
 
 const baseClassName =
-  "group flex h-full w-full flex-col justify-between rounded-2xl border border-neutral-light bg-white p-5 text-left shadow-sm transition hover:border-idfm-interaction hover:shadow-md focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus";
+  "group flex h-full w-full flex-col justify-start rounded-2xl border border-neutral-light bg-white p-5 text-left shadow-sm transition hover:border-idfm-interaction hover:shadow-md focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus";
 
 export function QuickActionCard({
   description,
