@@ -303,7 +303,6 @@ export function AppNavbar({ userName }: AppNavbarProps) {
       {/* Barre principale */}
       <div className="bg-idfm-anthracite px-5 text-white">
         <div className="mx-auto flex max-w-7xl items-stretch justify-between gap-2">
-
           {/* Logo */}
           <Link
             href="/"
@@ -321,7 +320,10 @@ export function AppNavbar({ userName }: AppNavbarProps) {
           </Link>
 
           {/* Navigation desktop avec dropdowns */}
-          <nav className="hidden items-stretch lg:flex" aria-label="Navigation principale">
+          <nav
+            className="hidden items-stretch lg:flex"
+            aria-label="Navigation principale"
+          >
             {(isConnected ? navGroupsAuth : navGroupsGuest).map((group) => (
               <div key={group.label} className="relative flex items-stretch">
                 {group.children ? (
@@ -381,17 +383,18 @@ export function AppNavbar({ userName }: AppNavbarProps) {
 
           {/* Actions — droite */}
           <div className="flex items-center gap-2 py-3">
-
             {/* Bouton Rechercher */}
             <div className="relative hidden md:block">
               {isSearchOpen ? (
-                <form onSubmit={handleSearchSubmit} className="flex h-10 items-center overflow-hidden rounded-full ring-1 ring-white/50">
+                <form
+                  onSubmit={handleSearchSubmit}
+                  className="flex h-10 items-center overflow-hidden rounded-full ring-1 ring-white/50"
+                >
                   <input
                     type="search"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Rechercher..."
-                    // eslint-disable-next-line jsx-a11y/no-autofocus
                     autoFocus
                     className="h-full w-44 bg-white/15 px-4 text-sm text-white placeholder-white/55 outline-none lg:w-52"
                   />
@@ -443,7 +446,9 @@ export function AppNavbar({ userName }: AppNavbarProps) {
                   {isConnected ? (
                     <>
                       <div className="border-b border-neutral-light px-5 py-3.5">
-                        <p className="text-xs text-neutral-medium">Connecté en tant que</p>
+                        <p className="text-xs text-neutral-medium">
+                          Connecté en tant que
+                        </p>
                         <p className="mt-0.5 truncate text-sm font-semibold text-idfm-anthracite">
                           {displayName ?? "Mon espace"}
                         </p>
@@ -512,17 +517,24 @@ export function AppNavbar({ userName }: AppNavbarProps) {
               className="flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white transition hover:bg-white/20 lg:hidden"
             >
               {isMobileMenuOpen ? <CloseIcon /> : <HamburgerIcon />}
-              <span className="sr-only">{isMobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}</span>
+              <span className="sr-only">
+                {isMobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+              </span>
             </button>
           </div>
         </div>
 
         {/* Menu mobile déroulant */}
         {isMobileMenuOpen && (
-          <div id="mobile-main-navigation" className="mx-auto max-w-7xl pb-5 lg:hidden">
-
+          <div
+            id="mobile-main-navigation"
+            className="mx-auto max-w-7xl pb-5 lg:hidden"
+          >
             {/* Recherche mobile */}
-            <form onSubmit={handleSearchSubmit} className="mb-3 flex h-10 overflow-hidden rounded-full ring-1 ring-white/30">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="mb-3 flex h-10 overflow-hidden rounded-full ring-1 ring-white/30"
+            >
               <input
                 type="search"
                 value={searchQuery}
@@ -544,22 +556,26 @@ export function AppNavbar({ userName }: AppNavbarProps) {
               className="overflow-hidden rounded-xl border border-white/15 bg-white text-idfm-anthracite"
               aria-label="Navigation mobile"
             >
-              {(isConnected ? mobileLinksAuth : mobileLinksGuest).map((link, index, arr) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center px-5 py-3.5 text-sm font-medium transition ${
-                    index < arr.length - 1 ? "border-b border-neutral-light" : ""
-                  } ${
-                    isActivePath(link.href)
-                      ? "bg-idfm-light font-semibold text-idfm-interaction"
-                      : "hover:bg-neutral-xlight"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {(isConnected ? mobileLinksAuth : mobileLinksGuest).map(
+                (link, index, arr) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center px-5 py-3.5 text-sm font-medium transition ${
+                      index < arr.length - 1
+                        ? "border-b border-neutral-light"
+                        : ""
+                    } ${
+                      isActivePath(link.href)
+                        ? "bg-idfm-light font-semibold text-idfm-interaction"
+                        : "hover:bg-neutral-xlight"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                ),
+              )}
             </nav>
 
             {/* Auth mobile */}
@@ -572,7 +588,9 @@ export function AppNavbar({ userName }: AppNavbarProps) {
                     className="flex items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20"
                   >
                     <UserIcon />
-                    <span className="truncate">{displayName ?? "Mon espace"}</span>
+                    <span className="truncate">
+                      {displayName ?? "Mon espace"}
+                    </span>
                   </Link>
                   <button
                     type="button"

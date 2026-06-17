@@ -343,3 +343,261 @@ export type SubscriptionRequestResponse = {
     status: "DONE" | "CURRENT" | "UPCOMING";
   }>;
 };
+
+export type AdminHouseholdStatus = "OK" | "WAITING_DOCUMENTS" | "TO_REVIEW" | "BLOCKED" | "SUPPORT_OPEN";
+export type AdminSupportCaseStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED";
+export type AdminSupportCaseType = "LOST_PASS" | "FOUND_PASS" | "DOCUMENT_REJECTED" | "PAYMENT_BLOCKED";
+
+export type AdminRecentActivity = {
+  id: string;
+  type: string;
+  label: string;
+  familyId: string | null;
+  customerNumber: string | null;
+  createdAt: string;
+};
+
+export type AdminFamilySummary = {
+  id: string;
+  customerNumber: string;
+  name: string;
+  manager: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+  };
+  profilesCount: number;
+  openRequestsCount: number;
+  lastEvent: {
+    label: string;
+    createdAt: string;
+  } | null;
+  status: AdminHouseholdStatus;
+};
+
+export type AdminSubscriptionRequest = {
+  id: string;
+  status: SubscriptionRequestStatus;
+  autoRenewalEnabled: boolean;
+  intelligentDossierEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  household: {
+    id: string;
+    customerNumber: string;
+    name: string;
+    ownerName: string;
+  };
+  member: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileType: DashboardMemberProfileType;
+  };
+  payer: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  offer: {
+    id: string;
+    slug: string;
+    name: string;
+    productType: OfferProductType;
+    priceLabel: string;
+  };
+  documents: Array<{
+    id: string;
+    label: string;
+    documentType: OfferDocumentType;
+    status: SubscriptionDocumentStatus;
+    rejectionReason: string | null;
+  }>;
+};
+
+export type AdminSupportCase = {
+  id: string;
+  type: AdminSupportCaseType;
+  status: AdminSupportCaseStatus;
+  description: string | null;
+  passNumberMasked: string | null;
+  foundLocation: string | null;
+  depositedAtDesk: boolean | null;
+  createdAt: string;
+  updatedAt: string;
+  household: {
+    id: string;
+    customerNumber: string;
+    name: string;
+    ownerName: string;
+  } | null;
+  member: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileType: DashboardMemberProfileType;
+  } | null;
+  possibleMatch: string | null;
+};
+
+export type AdminFamilyDetail = AdminFamilySummary & {
+  members: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    birthDate: string | null;
+    relationship: "SELF" | "CHILD" | "RELATIVE";
+    profileType: DashboardMemberProfileType;
+    schoolLevel: SchoolLevel | null;
+    department: string | null;
+    isHolder: boolean;
+    isPayer: boolean;
+    isLegalRepresentative: boolean;
+    currentSubscription: {
+      id: string;
+      productName: string;
+      status: DashboardMemberStatus;
+      recommendedProduct: string | null;
+      renewalDate: string | null;
+    } | null;
+    subscriptionRequests: Array<{
+      id: string;
+      offerName: string;
+      status: SubscriptionRequestStatus;
+      intelligentDossierEnabled: boolean;
+      autoRenewalEnabled: boolean;
+      createdAt: string;
+    }>;
+    expectedDocuments: string[];
+    supportCases: Array<{
+      id: string;
+      type: AdminSupportCaseType;
+      status: AdminSupportCaseStatus;
+      description: string | null;
+      createdAt: string;
+    }>;
+  }>;
+  subscriptionRequests: AdminSubscriptionRequest[];
+  supportCases: AdminSupportCase[];
+  history: Array<{
+    id: string;
+    label: string;
+    memberId: string | null;
+    createdAt: string;
+  }>;
+};
+
+export type AdminDashboardResponse = {
+  stats: {
+    familiesCount: number;
+    profilesCount: number;
+    openSubscriptionRequestsCount: number;
+    lostPassesCount: number;
+    foundPassesCount: number;
+    dossiersToReviewCount: number;
+  };
+  recentActivity: AdminRecentActivity[];
+  families: AdminFamilySummary[];
+  subscriptionRequests: AdminSubscriptionRequest[];
+  supportCases: AdminSupportCase[];
+};
+
+export type AdminSearchResult = {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  name?: string;
+  customerNumber: string | null;
+  manager?: AdminFamilySummary["manager"];
+  family?: AdminUserRow["family"];
+  status: AdminHouseholdStatus;
+  profiles?: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileType: DashboardMemberProfileType;
+  }>;
+};
+
+export type AdminUserRow = {
+  id: string;
+  sourceId: string;
+  recordType: "ACCOUNT" | "PROFILE";
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: "USER" | "EMPLOYEE" | "ADMIN";
+  customerNumber: string | null;
+  type: DashboardMemberProfileType;
+  family: {
+    id: string;
+    name: string;
+    customerNumber: string;
+  } | null;
+  status: AdminHouseholdStatus;
+};
+
+export type AdminManagementDetail = {
+  id: string;
+  sourceId: string;
+  recordType: "ACCOUNT" | "PROFILE";
+  identity: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    role: "USER" | "EMPLOYEE" | "ADMIN";
+    type: DashboardMemberProfileType;
+  };
+  household: {
+    id: string;
+    name: string;
+    customerNumber: string;
+    managerName: string;
+    managerEmail: string;
+  } | null;
+  householdRole: string;
+  flags: {
+    isHolder: boolean;
+    isPayer: boolean;
+    isLegalRepresentative: boolean;
+  };
+  profiles: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileType: DashboardMemberProfileType;
+    relationship: "SELF" | "CHILD" | "RELATIVE";
+  }>;
+  subscriptions: Array<{
+    id: string;
+    productName: string;
+    status: DashboardMemberStatus;
+    passNumberMasked: string | null;
+    renewalDate: string | null;
+  }>;
+  subscriptionRequests: Array<{
+    id: string;
+    offerName: string;
+    status: SubscriptionRequestStatus;
+    intelligentDossierEnabled: boolean;
+    autoRenewalEnabled: boolean;
+    documents: Array<{
+      id: string;
+      label: string;
+      status: SubscriptionDocumentStatus;
+      rejectionReason: string | null;
+    }>;
+    createdAt: string;
+  }>;
+  supportCases: AdminSupportCase[];
+  expectedDocuments: string[];
+  history: Array<{
+    id: string;
+    label: string;
+    createdAt: string;
+  }>;
+};
