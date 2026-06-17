@@ -10,6 +10,7 @@ import { FamilyHelpSection } from "@/components/organisms/FamilyHelpSection";
 import { FamilyMembersSection } from "@/components/organisms/FamilyMembersSection";
 import { FamilyQuickActions } from "@/components/organisms/FamilyQuickActions";
 import { FamilyRecentActivity } from "@/components/organisms/FamilyRecentActivity";
+import { FamilyWelcomeSection } from "@/components/organisms/FamilyWelcomeSection";
 import { LostPassModal } from "@/components/organisms/LostPassModal";
 import { DashboardLayout } from "@/components/templates/DashboardLayout";
 import {
@@ -24,10 +25,11 @@ type FlashMessage = {
   tone: "blue" | "green" | "orange" | "red";
 };
 
-type DashboardTabId = "overview" | "profiles" | "titles" | "services" | "alerts" | "help";
+type DashboardTabId = "welcome" | "overview" | "profiles" | "titles" | "services" | "alerts" | "help";
 
 function getActiveTab(value: string | null): DashboardTabId {
   switch (value) {
+    case "overview":
     case "profiles":
     case "titles":
     case "services":
@@ -35,7 +37,7 @@ function getActiveTab(value: string | null): DashboardTabId {
     case "help":
       return value;
     default:
-      return "overview";
+      return "welcome";
   }
 }
 
@@ -181,6 +183,16 @@ function FamilyDashboardPageContent() {
     });
   }
 
+  function openAddMember(profileType: RegisterMemberType = "YOUNG") {
+    setAddMemberType(profileType);
+    setIsAddMemberOpen(true);
+  }
+
+  function openLostPass(memberId?: string) {
+    setSelectedMemberId(memberId);
+    setIsLostPassOpen(true);
+  }
+
   async function handleAddMemberSubmit(payload: AddHouseholdMemberPayload) {
     const accessToken = localStorage.getItem("familyAccessToken");
 
@@ -218,6 +230,14 @@ function FamilyDashboardPageContent() {
     }
 
     switch (activeTab) {
+      case "welcome":
+        return (
+          <FamilyWelcomeSection
+            data={data}
+            onAddProfile={openAddMember}
+            onLostPassRequested={openLostPass}
+          />
+        );
       case "profiles":
         return (
           <div className="grid gap-12">
@@ -239,10 +259,7 @@ function FamilyDashboardPageContent() {
         return (
           <FamilyQuickActions
             members={data.members}
-            onLostPassRequested={(memberId) => {
-              setSelectedMemberId(memberId);
-              setIsLostPassOpen(true);
-            }}
+            onLostPassRequested={openLostPass}
           />
         );
       case "alerts":
@@ -258,10 +275,7 @@ function FamilyDashboardPageContent() {
             <AddMemberPanel onSelectProfile={handleSelectProfile} />
             <FamilyQuickActions
               members={data.members}
-              onLostPassRequested={(memberId) => {
-                setSelectedMemberId(memberId);
-                setIsLostPassOpen(true);
-              }}
+              onLostPassRequested={openLostPass}
             />
             <FamilyHelpSection />
             <FamilyRecentActivity items={data.recentActivity} />

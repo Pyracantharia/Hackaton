@@ -14,7 +14,7 @@ function getNotificationHref(notification: DashboardNotification) {
   }
 
   if (notification.type === "RENEWAL") {
-    return `/dashboard/family/renewal/${notification.memberId}`;
+    return `/dashboard/family/titles/recommendation?memberId=${notification.memberId}`;
   }
 
   return `/dashboard/family/members/${notification.memberId}`;

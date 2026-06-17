@@ -112,6 +112,9 @@ export type DashboardMember = {
   id: string;
   firstName: string;
   lastName: string;
+  birthDate: string | null;
+  schoolLevel: SchoolLevel | null;
+  department: IdfDepartment | null;
   relationship: "SELF" | "CHILD" | "RELATIVE";
   relationLabel: string;
   profileType: DashboardMemberProfileType;
@@ -203,4 +206,140 @@ export type FoundPassResponse = {
   message: string;
   supportCaseId: string;
   passNumberMasked: string;
+};
+
+export type OfferProductType =
+  | "NAVIGO_ANNUAL"
+  | "IMAGINE_R_JUNIOR"
+  | "IMAGINE_R_SCHOOL"
+  | "IMAGINE_R_STUDENT"
+  | "NAVIGO_SENIOR"
+  | "AMETHYSTE"
+  | "NAVIGO_LIBERTE"
+  | "UNKNOWN";
+
+export type OfferTargetProfile = "CHILD" | "YOUNG" | "STUDENT" | "SENIOR" | "ADULT" | "FAMILY" | "SOLIDARITY";
+
+export type OfferDocumentType =
+  | "PHOTO"
+  | "SCHOOL_CERTIFICATE"
+  | "ID_DOCUMENT"
+  | "ADDRESS_PROOF"
+  | "SCHOLARSHIP_CERTIFICATE"
+  | "SITUATION_PROOF"
+  | "PAYMENT_METHOD";
+
+export type OfferRequiredDocument = {
+  id: string;
+  documentType: OfferDocumentType;
+  label: string;
+  required: boolean;
+};
+
+export type ProductOffer = {
+  id: string;
+  slug: string;
+  name: string;
+  productType: OfferProductType;
+  shortDescription: string;
+  longDescription: string;
+  priceLabel: string;
+  durationLabel: string;
+  targetProfile: OfferTargetProfile;
+  minAge: number | null;
+  maxAge: number | null;
+  benefits: Array<{
+    id: string;
+    label: string;
+  }>;
+  requiredDocuments: OfferRequiredDocument[];
+};
+
+export type ProductOfferDetail = ProductOffer & {
+  relatedOffers: ProductOffer[];
+};
+
+export type RecommendationAnswers = {
+  lifeSituation?: "CHILD_SCHOOL" | "CHILD_JUNIOR" | "STUDENT" | "SENIOR" | "ADULT_EMPLOYEE" | "CAREGIVER" | "OTHER";
+  age?: number;
+  schoolLevel?: SchoolLevel;
+  department?: IdfDepartment;
+};
+
+export type TitleRecommendationPayload = {
+  householdMemberId: string;
+  answers: RecommendationAnswers;
+};
+
+export type TitleRecommendationResponse = {
+  recommendedOffer: ProductOffer;
+  reason: string;
+  requiredDocuments: OfferRequiredDocument[];
+  nextAction: string;
+};
+
+export type SubscriptionRequestStatus =
+  | "DRAFT"
+  | "WAITING_DOCUMENTS"
+  | "UNDER_REVIEW"
+  | "PAYMENT_PENDING"
+  | "CONFIRMED"
+  | "ACTIVE"
+  | "BLOCKED"
+  | "CANCELLED";
+
+export type SubscriptionDocumentStatus = "MISSING" | "READY" | "UPLOADED" | "UNDER_REVIEW" | "VALIDATED" | "REJECTED";
+
+export type CreateSubscriptionRequestPayload = {
+  householdMemberId: string;
+  offerId: string;
+  payerMemberId?: string;
+  intelligentDossierEnabled: boolean;
+  autoRenewalEnabled: boolean;
+};
+
+export type SubscriptionRequestResponse = {
+  id: string;
+  status: SubscriptionRequestStatus;
+  autoRenewalEnabled: boolean;
+  intelligentDossierEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  household: {
+    id: string;
+    name: string;
+  };
+  member: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileType: DashboardMemberProfileType;
+    relationship: "SELF" | "CHILD" | "RELATIVE";
+  };
+  payer: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  offer: {
+    id: string;
+    slug: string;
+    name: string;
+    productType: OfferProductType;
+    shortDescription: string;
+    priceLabel: string;
+    durationLabel: string;
+  };
+  documents: Array<{
+    id: string;
+    documentType: OfferDocumentType;
+    label: string;
+    status: SubscriptionDocumentStatus;
+    rejectionReason: string | null;
+  }>;
+  timeline: Array<{
+    key: string;
+    label: string;
+    status: "DONE" | "CURRENT" | "UPCOMING";
+  }>;
 };

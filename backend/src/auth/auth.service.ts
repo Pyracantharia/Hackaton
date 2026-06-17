@@ -326,7 +326,7 @@ export class AuthService {
                   ? [
                       {
                         label: "Trouver une offre adaptee",
-                        href: `/dashboard/family/renewal/${record.id}`,
+                        href: `/dashboard/family/titles/recommendation?memberId=${record.id}`,
                         variant: "PRIMARY",
                         order: 1,
                       },

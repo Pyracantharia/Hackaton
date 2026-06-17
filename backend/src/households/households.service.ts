@@ -16,6 +16,9 @@ type DashboardMember = {
   id: string;
   firstName: string;
   lastName: string;
+  birthDate: string | null;
+  schoolLevel: "PRIMARY" | "COLLEGE" | "LYCEE" | "HIGHER_EDUCATION" | "OTHER" | null;
+  department: "75" | "77" | "78" | "91" | "92" | "93" | "94" | "95" | null;
   relationship: "SELF" | "CHILD" | "RELATIVE";
   relationLabel: string;
   profileType: "MANAGER" | "YOUNG" | "SENIOR" | "OTHER";
@@ -82,6 +85,12 @@ export class HouseholdsService {
             },
             supportCases: {
               orderBy: { createdAt: "desc" },
+            },
+            subscriptionRequests: {
+              orderBy: { updatedAt: "desc" },
+              include: {
+                offer: true,
+              },
             },
           },
         },
@@ -155,6 +164,9 @@ export class HouseholdsService {
       id: string;
       firstName: string;
       lastName: string;
+      birthDate: Date | null;
+      schoolLevel: "PRIMARY" | "COLLEGE" | "LYCEE" | "HIGHER_EDUCATION" | "OTHER" | null;
+      department: string | null;
       relationship: "SELF" | "CHILD" | "RELATIVE";
       profileType: "MANAGER" | "YOUNG" | "SENIOR" | "OTHER";
       isHolder: boolean;
@@ -170,6 +182,12 @@ export class HouseholdsService {
         nextActionLabel: string | null;
         recommendedProduct: string | null;
       }>;
+      subscriptionRequests: Array<{
+        status: string;
+        offer: {
+          name: string;
+        };
+      }>;
     },
     managerName: string,
   ): DashboardMember {
@@ -177,6 +195,9 @@ export class HouseholdsService {
     const defaults = this.getDefaultProfileState(profileType);
     const hasOpenLostPass = member.supportCases.some(
       (supportCase) => supportCase.type === "LOST_PASS" && supportCase.status !== "RESOLVED",
+    );
+    const latestOpenRequest = member.subscriptionRequests.find(
+      (request) => !["ACTIVE", "CANCELLED", "BLOCKED"].includes(request.status),
     );
 
     const relationLabel =
@@ -192,13 +213,20 @@ export class HouseholdsService {
       id: member.id,
       firstName: member.firstName,
       lastName: member.lastName,
+      birthDate: member.birthDate?.toISOString().slice(0, 10) ?? null,
+      schoolLevel: member.schoolLevel,
+      department: member.department as DashboardMember["department"],
       relationship: member.relationship,
       relationLabel,
       profileType,
       currentProduct: defaults.currentProduct,
-      recommendedProduct: defaults.recommendedProduct,
-      status: hasOpenLostPass ? "LOST" : defaults.status,
-      nextAction: hasOpenLostPass ? "Suivre la demande de remplacement" : defaults.nextAction,
+      recommendedProduct: latestOpenRequest?.offer.name ?? defaults.recommendedProduct,
+      status: hasOpenLostPass ? "LOST" : latestOpenRequest ? "PENDING_DOCUMENT" : defaults.status,
+      nextAction: hasOpenLostPass
+        ? "Suivre la demande de remplacement"
+        : latestOpenRequest
+          ? "Demande de souscription en cours"
+          : defaults.nextAction,
       payerName: member.isPayer ? `${member.firstName} ${member.lastName}` : managerName,
       isHolder: member.isHolder,
       isPayer: member.isPayer,
@@ -434,7 +462,7 @@ export class HouseholdsService {
               ? [
                   {
                     label: "Trouver une offre adaptee",
-                    href: `/dashboard/family/renewal/${member.id}`,
+                    href: `/dashboard/family/titles/recommendation?memberId=${member.id}`,
                     variant: "PRIMARY",
                     order: 1,
                   },
