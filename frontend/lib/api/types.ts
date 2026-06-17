@@ -219,8 +219,14 @@ export type SupportCaseStatus =
   | "IN_PROGRESS"
   | "TRANSFER_TO_PHONE_REQUESTED"
   | "PASS_DEACTIVATION_REQUESTED"
+  | "PASS_FOUND_WAITING_PICKUP"
+  | "PASS_PICKED_UP"
+  | "DIGITAL_SUPPORT_CONFIRMED"
+  | "PHYSICAL_PASS_REACTIVATION_REQUESTED"
   | "RESOLVED"
   | "CANCELLED_BY_USER";
+
+export type SupportCaseFinalChoice = "DIGITAL_SUPPORT" | "PHYSICAL_PASS_REACTIVATION";
 
 export type LostPassPayload = {
   memberId: string;
@@ -252,6 +258,14 @@ export type SupportCaseSummary = {
   memberName: string | null;
   titleLabel: string | null;
   passNumberMasked: string | null;
+  foundLocation: string | null;
+  foundDeskName: string | null;
+  foundDeskAddress: string | null;
+  foundAt: string | null;
+  clientNotifiedAt: string | null;
+  pickedUpAt: string | null;
+  finalChoice: SupportCaseFinalChoice | null;
+  finalChoiceAt: string | null;
   cancellable: boolean;
   createdAt: string;
   updatedAt: string;
@@ -499,7 +513,7 @@ export type SubscriptionRequestResponse = {
 };
 
 export type AdminHouseholdStatus = "OK" | "WAITING_DOCUMENTS" | "TO_REVIEW" | "BLOCKED" | "SUPPORT_OPEN";
-export type AdminSupportCaseStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED";
+export type AdminSupportCaseStatus = SupportCaseStatus;
 export type AdminSupportCaseType = "LOST_PASS" | "FOUND_PASS" | "DOCUMENT_REJECTED" | "PAYMENT_BLOCKED";
 
 export type AdminRecentActivity = {
@@ -573,14 +587,25 @@ export type AdminSubscriptionRequest = {
 
 export type AdminSupportCase = {
   id: string;
+  dossierNumber: string;
   type: AdminSupportCaseType;
   status: AdminSupportCaseStatus;
+  reason: LostPassReason | null;
+  chosenResolution: SupportCaseResolution | null;
+  finalChoice: SupportCaseFinalChoice | null;
   description: string | null;
   passNumberMasked: string | null;
   foundLocation: string | null;
+  foundDeskName: string | null;
+  foundDeskAddress: string | null;
+  foundAt: string | null;
+  clientNotifiedAt: string | null;
+  pickedUpAt: string | null;
+  finalChoiceAt: string | null;
   depositedAtDesk: boolean | null;
   createdAt: string;
   updatedAt: string;
+  resolvedAt: string | null;
   household: {
     id: string;
     customerNumber: string;
@@ -589,11 +614,57 @@ export type AdminSupportCase = {
   } | null;
   member: {
     id: string;
-    firstName: string;
-    lastName: string;
-    profileType: DashboardMemberProfileType;
-  } | null;
+      firstName: string;
+      lastName: string;
+      profileType: DashboardMemberProfileType;
+      birthDate?: string | null;
+      currentTitle?: {
+        id: string;
+        productName: string;
+        status: DashboardMemberStatus;
+      } | null;
+    } | null;
   possibleMatch: string | null;
+};
+
+export type AdminSosFilter =
+  | "all"
+  | "active"
+  | "transfer"
+  | "deactivation"
+  | "found"
+  | "waiting-pickup"
+  | "closed"
+  | "cancelled";
+
+export type AdminSosDesk = {
+  name: string;
+  address: string;
+};
+
+export type AdminSosDashboardResponse = {
+  stats: {
+    totalCases: number;
+    activeCases: number;
+    foundTodayCount: number;
+    waitingPickupCount: number;
+    transferToPhoneCount: number;
+    deactivationCount: number;
+    closedCasesCount: number;
+    resolutionRate: number;
+    averageDelayHours: number;
+  };
+  desks: AdminSosDesk[];
+  recentCases: AdminSupportCase[];
+};
+
+export type AdminFoundPassResponse = {
+  matched: boolean;
+  supportCase: AdminSupportCase;
+};
+
+export type FinalChoicePayload = {
+  finalChoice: SupportCaseFinalChoice;
 };
 
 export type AdminFamilyDetail = AdminFamilySummary & {

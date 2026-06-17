@@ -1,0 +1,18 @@
+-- CreateEnum
+CREATE TYPE "SupportCaseFinalChoice" AS ENUM ('DIGITAL_SUPPORT', 'PHYSICAL_PASS_REACTIVATION');
+
+-- AlterEnum
+ALTER TYPE "SupportCaseStatus" ADD VALUE 'PASS_FOUND_WAITING_PICKUP';
+ALTER TYPE "SupportCaseStatus" ADD VALUE 'PASS_PICKED_UP';
+ALTER TYPE "SupportCaseStatus" ADD VALUE 'DIGITAL_SUPPORT_CONFIRMED';
+ALTER TYPE "SupportCaseStatus" ADD VALUE 'PHYSICAL_PASS_REACTIVATION_REQUESTED';
+
+-- AlterTable
+ALTER TABLE "SupportCase"
+ADD COLUMN "finalChoice" "SupportCaseFinalChoice",
+ADD COLUMN "foundDeskName" TEXT,
+ADD COLUMN "foundDeskAddress" TEXT,
+ADD COLUMN "foundAt" TIMESTAMP(3),
+ADD COLUMN "clientNotifiedAt" TIMESTAMP(3),
+ADD COLUMN "pickedUpAt" TIMESTAMP(3),
+ADD COLUMN "finalChoiceAt" TIMESTAMP(3);

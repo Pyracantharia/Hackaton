@@ -3,6 +3,7 @@ import { JwtAuthGuard } from "src/auth/guards/jwt-auth.guard";
 import type { AuthenticatedRequest } from "src/auth/guards/jwt-auth.guard";
 import { CreateFoundPassDto } from "./dtos/create-found-pass.dto";
 import { CreateLostPassDto } from "./dtos/create-lost-pass.dto";
+import { FinalChoiceDto } from "./dtos/final-choice.dto";
 import { SupportCasesService } from "./support-cases.service";
 
 @Controller("api/support-cases")
@@ -29,6 +30,12 @@ export class SupportCasesController {
     return this.supportCasesService.getMyCases(request.user.sub);
   }
 
+  @Get("recovered-alerts")
+  @UseGuards(JwtAuthGuard)
+  async getRecoveredAlerts(@Req() request: AuthenticatedRequest) {
+    return this.supportCasesService.getRecoveredAlerts(request.user.sub);
+  }
+
   @Get(":id")
   @UseGuards(JwtAuthGuard)
   async getCaseById(@Req() request: AuthenticatedRequest, @Param("id") id: string) {
@@ -39,5 +46,21 @@ export class SupportCasesController {
   @UseGuards(JwtAuthGuard)
   async cancelCase(@Req() request: AuthenticatedRequest, @Param("id") id: string) {
     return this.supportCasesService.cancelCase(request.user.sub, id);
+  }
+
+  @Patch(":id/picked-up")
+  @UseGuards(JwtAuthGuard)
+  async markPickedUp(@Req() request: AuthenticatedRequest, @Param("id") id: string) {
+    return this.supportCasesService.markPickedUp(request.user.sub, id);
+  }
+
+  @Patch(":id/final-choice")
+  @UseGuards(JwtAuthGuard)
+  async registerFinalChoice(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() body: FinalChoiceDto,
+  ) {
+    return this.supportCasesService.registerFinalChoice(request.user.sub, id, body.finalChoice);
   }
 }

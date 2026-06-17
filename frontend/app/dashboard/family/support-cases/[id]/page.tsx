@@ -12,6 +12,7 @@ import { DashboardLayout } from "@/components/templates/DashboardLayout";
 import { cancelSupportCase, getSupportCaseDetail } from "@/lib/api/households";
 import type { SupportCaseDetail } from "@/lib/api/types";
 import {
+  finalChoiceLabels,
   formatSupportCaseDate,
   lostPassReasonLabels,
   resolutionLabels,
@@ -159,6 +160,28 @@ export default function SupportCaseDetailPage() {
                   </dd>
                 </div>
               ) : null}
+              {detail.foundDeskName || detail.foundLocation ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-medium">Guichet de recuperation</dt>
+                  <dd className="text-right font-semibold text-idfm-anthracite">
+                    {detail.foundDeskName ?? detail.foundLocation}
+                  </dd>
+                </div>
+              ) : null}
+              {detail.foundDeskAddress ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-medium">Adresse guichet</dt>
+                  <dd className="text-right font-semibold text-idfm-anthracite">{detail.foundDeskAddress}</dd>
+                </div>
+              ) : null}
+              {detail.finalChoice ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-medium">Choix apres recuperation</dt>
+                  <dd className="text-right font-semibold text-idfm-anthracite">
+                    {finalChoiceLabels[detail.finalChoice]}
+                  </dd>
+                </div>
+              ) : null}
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-medium">Date de creation</dt>
                 <dd className="text-right font-semibold text-idfm-anthracite">
@@ -189,6 +212,11 @@ export default function SupportCaseDetailPage() {
                 </Button>
               </div>
             </section>
+          ) : detail.status === "PASS_FOUND_WAITING_PICKUP" ? (
+            <InfoBox tone="green">
+              Votre pass est disponible au guichet {detail.foundDeskName ?? detail.foundLocation ?? "indique"}.
+              Utilisez le bandeau de votre tableau de bord pour confirmer la recuperation.
+            </InfoBox>
           ) : (
             <InfoBox>
               Cette declaration ne peut plus etre annulee car elle a deja ete traitee ou annulee.

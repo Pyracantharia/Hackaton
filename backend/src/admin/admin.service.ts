@@ -1,11 +1,21 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
+import { CreateAdminFoundPassDto } from "./dtos/create-admin-found-pass.dto";
+import { UpdateAdminSosCaseStatusDto } from "./dtos/update-admin-sos-case-status.dto";
 import { UpdateAdminSubscriptionRequestDto } from "./dtos/update-admin-subscription-request.dto";
 import { UpdateAdminSupportCaseDto } from "./dtos/update-admin-support-case.dto";
 
 type FamilyRecord = any;
 type SubscriptionRequestRecord = any;
 type SupportCaseRecord = any;
+
+const SOS_DESKS = [
+  { name: "Gare de Lyon", address: "Place Louis-Armand, 75012 Paris" },
+  { name: "Chatelet-Les Halles", address: "1 Place Marguerite de Navarre, 75001 Paris" },
+  { name: "La Defense", address: "Parvis de La Defense, 92400 Courbevoie" },
+  { name: "Saint-Denis Universite", address: "2 Rue Guynemer, 93200 Saint-Denis" },
+  { name: "Versailles Chantiers", address: "4 Rue de l'Abbe Rousseaux, 78000 Versailles" },
+];
 
 @Injectable()
 export class AdminService {
@@ -17,6 +27,39 @@ export class AdminService {
 
   private fullName(person: { firstName: string; lastName: string }) {
     return `${person.firstName} ${person.lastName}`.trim();
+  }
+
+  private maskPassNumber(passNumber: string) {
+    const sanitized = passNumber.replace(/[\s*-]/g, "");
+    const visiblePart = sanitized.slice(-4);
+    return `**** ${visiblePart}`;
+  }
+
+  private normalizePassNumber(passNumber: string | null) {
+    return (passNumber ?? "").replace(/[\s*-]/g, "").toLowerCase();
+  }
+
+  private dossierNumber(supportCase: { id: string; createdAt: Date }) {
+    const year = supportCase.createdAt.getFullYear();
+    const segment = supportCase.id.replace(/[^a-zA-Z0-9]/g, "").slice(-4).toUpperCase();
+    return `SOS-${year}-${segment}`;
+  }
+
+  private pickDesk(name?: string) {
+    if (name) {
+      return SOS_DESKS.find((desk) => desk.name === name) ?? SOS_DESKS[0];
+    }
+
+    return SOS_DESKS[Math.floor(Math.random() * SOS_DESKS.length)];
+  }
+
+  private isSosClosed(status: string) {
+    return [
+      "RESOLVED",
+      "CANCELLED_BY_USER",
+      "DIGITAL_SUPPORT_CONFIRMED",
+      "PHYSICAL_PASS_REACTIVATION_REQUESTED",
+    ].includes(status);
   }
 
   private getHouseholdStatus(household: {
@@ -110,16 +153,29 @@ export class AdminService {
   }
 
   private formatSupportCase(supportCase: SupportCaseRecord) {
+    const memberSubscriptions = supportCase.member?.subscriptions ?? [];
+
     return {
       id: supportCase.id,
+      dossierNumber: this.dossierNumber(supportCase),
       type: supportCase.type,
       status: supportCase.status,
+      reason: supportCase.reason,
+      chosenResolution: supportCase.chosenResolution,
+      finalChoice: supportCase.finalChoice,
       description: supportCase.description,
       passNumberMasked: supportCase.passNumberMasked,
       foundLocation: supportCase.foundLocation,
+      foundDeskName: supportCase.foundDeskName,
+      foundDeskAddress: supportCase.foundDeskAddress,
+      foundAt: supportCase.foundAt?.toISOString() ?? null,
       depositedAtDesk: supportCase.depositedAtDesk,
+      clientNotifiedAt: supportCase.clientNotifiedAt?.toISOString() ?? null,
+      pickedUpAt: supportCase.pickedUpAt?.toISOString() ?? null,
+      finalChoiceAt: supportCase.finalChoiceAt?.toISOString() ?? null,
       createdAt: supportCase.createdAt.toISOString(),
       updatedAt: supportCase.updatedAt.toISOString(),
+      resolvedAt: supportCase.resolvedAt?.toISOString() ?? null,
       household: supportCase.household
         ? {
             id: supportCase.household.id,
@@ -134,6 +190,14 @@ export class AdminService {
             firstName: supportCase.member.firstName,
             lastName: supportCase.member.lastName,
             profileType: supportCase.member.profileType,
+            birthDate: supportCase.member.birthDate?.toISOString?.() ?? null,
+            currentTitle: memberSubscriptions[0]
+              ? {
+                  id: memberSubscriptions[0].id,
+                  productName: memberSubscriptions[0].productName,
+                  status: memberSubscriptions[0].status,
+                }
+              : null,
           }
         : null,
       possibleMatch: supportCase.household && supportCase.member
@@ -511,7 +575,11 @@ export class AdminService {
     return this.prismaService.supportCase.findMany({
       include: {
         household: { include: { owner: true } },
-        member: true,
+        member: {
+          include: {
+            subscriptions: { orderBy: { updatedAt: "desc" }, take: 1 },
+          },
+        },
       },
       orderBy: { updatedAt: "desc" },
     });
@@ -752,6 +820,300 @@ export class AdminService {
           householdId: updated.householdId,
           memberId: updated.memberId,
           label: `Back-office : dossier support ${updated.type} passé au statut ${data.status}.`,
+        },
+      });
+    }
+
+    return this.formatSupportCase(updated);
+  }
+
+  async getSosNavigoDashboard() {
+    const supportCases = await this.findSupportCaseRecords();
+    const lostPassCases = supportCases.filter((supportCase) => supportCase.type === "LOST_PASS");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const closedCases = lostPassCases.filter((supportCase) => this.isSosClosed(supportCase.status));
+    const foundToday = supportCases.filter((supportCase) => {
+      const candidateDate = supportCase.foundAt ?? supportCase.createdAt;
+      return supportCase.type === "FOUND_PASS" || supportCase.status === "PASS_FOUND_WAITING_PICKUP"
+        ? candidateDate >= today
+        : false;
+    });
+    const delays = closedCases
+      .map((supportCase) => {
+        const endDate = supportCase.resolvedAt ?? supportCase.finalChoiceAt ?? supportCase.pickedUpAt ?? supportCase.updatedAt;
+        return Math.max(0, endDate.getTime() - supportCase.createdAt.getTime());
+      })
+      .filter((delay) => delay > 0);
+    const averageDelayHours = delays.length
+      ? Math.round((delays.reduce((sum, delay) => sum + delay, 0) / delays.length / 3_600_000) * 10) / 10
+      : 0;
+
+    return {
+      stats: {
+        totalCases: supportCases.length,
+        activeCases: lostPassCases.filter((supportCase) => !this.isSosClosed(supportCase.status)).length,
+        foundTodayCount: foundToday.length,
+        waitingPickupCount: supportCases.filter((supportCase) => supportCase.status === "PASS_FOUND_WAITING_PICKUP").length,
+        transferToPhoneCount: lostPassCases.filter((supportCase) => supportCase.chosenResolution === "TRANSFER_TO_PHONE").length,
+        deactivationCount: lostPassCases.filter((supportCase) => supportCase.chosenResolution === "DEACTIVATE_ONLY").length,
+        closedCasesCount: closedCases.length,
+        resolutionRate: lostPassCases.length ? Math.round((closedCases.length / lostPassCases.length) * 100) : 0,
+        averageDelayHours,
+      },
+      desks: SOS_DESKS,
+      recentCases: supportCases.slice(0, 8).map((supportCase) => this.formatSupportCase(supportCase)),
+    };
+  }
+
+  async getSosNavigoCases(filter = "all", query = "") {
+    const normalizedQuery = query.trim().toLowerCase();
+    const supportCases = await this.findSupportCaseRecords();
+
+    return supportCases
+      .filter((supportCase) => {
+        if (filter === "active" && this.isSosClosed(supportCase.status)) {
+          return false;
+        }
+
+        if (filter === "transfer" && supportCase.chosenResolution !== "TRANSFER_TO_PHONE") {
+          return false;
+        }
+
+        if (filter === "deactivation" && supportCase.chosenResolution !== "DEACTIVATE_ONLY") {
+          return false;
+        }
+
+        if (filter === "found" && supportCase.type !== "FOUND_PASS" && !supportCase.foundAt) {
+          return false;
+        }
+
+        if (filter === "waiting-pickup" && supportCase.status !== "PASS_FOUND_WAITING_PICKUP") {
+          return false;
+        }
+
+        if (filter === "closed" && !this.isSosClosed(supportCase.status)) {
+          return false;
+        }
+
+        if (filter === "cancelled" && supportCase.status !== "CANCELLED_BY_USER") {
+          return false;
+        }
+
+        if (!normalizedQuery) {
+          return true;
+        }
+
+        const searchable = [
+          this.dossierNumber(supportCase),
+          supportCase.type,
+          supportCase.status,
+          supportCase.reason ?? "",
+          supportCase.chosenResolution ?? "",
+          supportCase.passNumberMasked ?? "",
+          supportCase.foundDeskName ?? "",
+          supportCase.household ? this.customerNumber(supportCase.household.id) : "",
+          supportCase.household?.name ?? "",
+          supportCase.household?.owner?.email ?? "",
+          supportCase.member?.firstName ?? "",
+          supportCase.member?.lastName ?? "",
+        ].join(" ").toLowerCase();
+
+        return searchable.includes(normalizedQuery);
+      })
+      .map((supportCase) => this.formatSupportCase(supportCase));
+  }
+
+  async getSosNavigoCase(id: string) {
+    const supportCase = (await this.findSupportCaseRecords()).find((candidate) => candidate.id === id);
+
+    if (!supportCase) {
+      throw new NotFoundException("Dossier SOS Navigo introuvable.");
+    }
+
+    return this.formatSupportCase(supportCase);
+  }
+
+  async registerFoundPass(data: CreateAdminFoundPassDto) {
+    const passNumberMasked = this.maskPassNumber(data.passNumber);
+    const desk = this.pickDesk(data.deskName);
+    const foundAt = new Date();
+    const activeLostCases = await this.prismaService.supportCase.findMany({
+      where: {
+        type: "LOST_PASS",
+        status: {
+          notIn: [
+            "RESOLVED",
+            "CANCELLED_BY_USER",
+            "PASS_PICKED_UP",
+            "DIGITAL_SUPPORT_CONFIRMED",
+            "PHYSICAL_PASS_REACTIVATION_REQUESTED",
+          ],
+        },
+      },
+      include: {
+        household: { include: { owner: true } },
+        member: {
+          include: {
+            subscriptions: { orderBy: { updatedAt: "desc" }, take: 1 },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    const normalizedPassNumber = this.normalizePassNumber(passNumberMasked);
+    const matchedCase = activeLostCases.find(
+      (supportCase) => this.normalizePassNumber(supportCase.passNumberMasked) === normalizedPassNumber,
+    );
+
+    if (matchedCase) {
+      const updated = await this.prismaService.supportCase.update({
+        where: { id: matchedCase.id },
+        data: {
+          status: "PASS_FOUND_WAITING_PICKUP",
+          foundLocation: desk.name,
+          foundDeskName: desk.name,
+          foundDeskAddress: desk.address,
+          foundAt,
+          depositedAtDesk: true,
+        },
+        include: {
+          household: { include: { owner: true } },
+          member: {
+            include: {
+              subscriptions: { orderBy: { updatedAt: "desc" }, take: 1 },
+            },
+          },
+        },
+      });
+
+      if (updated.householdId) {
+        await this.prismaService.householdActivity.create({
+          data: {
+            householdId: updated.householdId,
+            memberId: updated.memberId,
+            label: `SOS Navigo : pass retrouve au guichet ${desk.name}.`,
+          },
+        });
+      }
+
+      return {
+        matched: true,
+        supportCase: this.formatSupportCase(updated),
+      };
+    }
+
+    const created = await this.prismaService.supportCase.create({
+      data: {
+        type: "FOUND_PASS",
+        status: "OPEN",
+        passNumberMasked,
+        foundLocation: desk.name,
+        foundDeskName: desk.name,
+        foundDeskAddress: desk.address,
+        foundAt,
+        depositedAtDesk: true,
+        description: `Pass retrouve au guichet ${desk.name}.`,
+      },
+      include: {
+        household: { include: { owner: true } },
+        member: {
+          include: {
+            subscriptions: { orderBy: { updatedAt: "desc" }, take: 1 },
+          },
+        },
+      },
+    });
+
+    return {
+      matched: false,
+      supportCase: this.formatSupportCase(created),
+    };
+  }
+
+  async notifySosNavigoCase(id: string) {
+    const updated = await this.prismaService.supportCase.update({
+      where: { id },
+      data: {
+        clientNotifiedAt: new Date(),
+      },
+      include: {
+        household: { include: { owner: true } },
+        member: {
+          include: {
+            subscriptions: { orderBy: { updatedAt: "desc" }, take: 1 },
+          },
+        },
+      },
+    });
+
+    if (updated.householdId) {
+      await Promise.all([
+        this.prismaService.familyNotification.create({
+          data: {
+            householdId: updated.householdId,
+            memberId: updated.memberId,
+            type: "SUPPORT_UPDATE",
+            severity: "SUCCESS",
+            title: "Pass Navigo retrouve",
+            message: `${updated.member ? this.fullName(updated.member) : "Un membre du foyer"} peut recuperer son pass au guichet ${updated.foundDeskName ?? updated.foundLocation ?? "indique"}.`,
+          },
+        }),
+        this.prismaService.householdActivity.create({
+          data: {
+            householdId: updated.householdId,
+            memberId: updated.memberId,
+            label: "SOS Navigo : client notifie de la disponibilite du pass.",
+          },
+        }),
+      ]);
+    }
+
+    return this.formatSupportCase(updated);
+  }
+
+  async updateSosNavigoCaseStatus(id: string, data: UpdateAdminSosCaseStatusDto) {
+    const patch: Record<string, unknown> = {
+      status: data.status,
+    };
+
+    if (data.status === "PASS_FOUND_WAITING_PICKUP") {
+      const desk = this.pickDesk();
+      patch.foundDeskName = desk.name;
+      patch.foundDeskAddress = desk.address;
+      patch.foundLocation = desk.name;
+      patch.foundAt = new Date();
+      patch.depositedAtDesk = true;
+    }
+
+    if (data.status === "PASS_PICKED_UP") {
+      patch.pickedUpAt = new Date();
+    }
+
+    if (data.status === "RESOLVED") {
+      patch.resolvedAt = new Date();
+    }
+
+    const updated = await this.prismaService.supportCase.update({
+      where: { id },
+      data: patch,
+      include: {
+        household: { include: { owner: true } },
+        member: {
+          include: {
+            subscriptions: { orderBy: { updatedAt: "desc" }, take: 1 },
+          },
+        },
+      },
+    });
+
+    if (updated.householdId) {
+      await this.prismaService.householdActivity.create({
+        data: {
+          householdId: updated.householdId,
+          memberId: updated.memberId,
+          label: `SOS Navigo : dossier passe au statut ${data.status}.`,
         },
       });
     }

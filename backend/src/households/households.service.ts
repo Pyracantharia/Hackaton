@@ -199,6 +199,10 @@ export class HouseholdsService {
           | "IN_PROGRESS"
           | "TRANSFER_TO_PHONE_REQUESTED"
           | "PASS_DEACTIVATION_REQUESTED"
+          | "PASS_FOUND_WAITING_PICKUP"
+          | "PASS_PICKED_UP"
+          | "DIGITAL_SUPPORT_CONFIRMED"
+          | "PHYSICAL_PASS_REACTIVATION_REQUESTED"
           | "RESOLVED"
           | "CANCELLED_BY_USER";
       }>;

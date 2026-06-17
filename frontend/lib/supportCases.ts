@@ -1,4 +1,5 @@
 import type {
+  SupportCaseFinalChoice,
   LostPassReason,
   SupportCaseResolution,
   SupportCaseStatus,
@@ -11,6 +12,10 @@ export const supportCaseStatusLabels: Record<SupportCaseStatus, string> = {
   IN_PROGRESS: "En cours de traitement",
   TRANSFER_TO_PHONE_REQUESTED: "Transfert telephone demande",
   PASS_DEACTIVATION_REQUESTED: "Desactivation demandee",
+  PASS_FOUND_WAITING_PICKUP: "Pass retrouve",
+  PASS_PICKED_UP: "Pass recupere",
+  DIGITAL_SUPPORT_CONFIRMED: "Support digital conserve",
+  PHYSICAL_PASS_REACTIVATION_REQUESTED: "Reactivation du pass demandee",
   RESOLVED: "Demande traitee",
   CANCELLED_BY_USER: "Annulee",
 };
@@ -20,6 +25,10 @@ export const supportCaseStatusTones: Record<SupportCaseStatus, BadgeTone> = {
   IN_PROGRESS: "orange",
   TRANSFER_TO_PHONE_REQUESTED: "blue",
   PASS_DEACTIVATION_REQUESTED: "orange",
+  PASS_FOUND_WAITING_PICKUP: "green",
+  PASS_PICKED_UP: "green",
+  DIGITAL_SUPPORT_CONFIRMED: "green",
+  PHYSICAL_PASS_REACTIVATION_REQUESTED: "blue",
   RESOLVED: "green",
   CANCELLED_BY_USER: "red",
 };
@@ -34,6 +43,11 @@ export const lostPassReasonLabels: Record<LostPassReason, string> = {
 export const resolutionLabels: Record<SupportCaseResolution, string> = {
   TRANSFER_TO_PHONE: "Transfert sur telephone",
   DEACTIVATE_ONLY: "Desactivation du pass",
+};
+
+export const finalChoiceLabels: Record<SupportCaseFinalChoice, string> = {
+  DIGITAL_SUPPORT: "Rester sur support digital",
+  PHYSICAL_PASS_REACTIVATION: "Reactiver mon pass physique",
 };
 
 // MVP : reproduit la logique du backend pour afficher un numero de pass masque

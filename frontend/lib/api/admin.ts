@@ -3,7 +3,10 @@ import type {
   AdminDashboardResponse,
   AdminFamilyDetail,
   AdminFamilySummary,
+  AdminFoundPassResponse,
   AdminSearchResult,
+  AdminSosDashboardResponse,
+  AdminSosFilter,
   AdminSubscriptionRequest,
   AdminSupportCase,
   AdminSupportCaseStatus,
@@ -87,6 +90,56 @@ export function updateAdminSupportCase(
   status: Extract<AdminSupportCaseStatus, "IN_PROGRESS" | "RESOLVED">,
 ) {
   return adminFetch<AdminSupportCase>(accessToken, `/api/admin/support-cases/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function getAdminSosNavigoDashboard(accessToken: string) {
+  return adminFetch<AdminSosDashboardResponse>(accessToken, "/api/admin/sos-navigo/dashboard");
+}
+
+export function getAdminSosNavigoCases(
+  accessToken: string,
+  filter: AdminSosFilter = "all",
+  query = "",
+) {
+  const params = new URLSearchParams({ filter, q: query });
+  return adminFetch<AdminSupportCase[]>(accessToken, `/api/admin/sos-navigo/cases?${params.toString()}`);
+}
+
+export function getAdminSosNavigoCase(accessToken: string, id: string) {
+  return adminFetch<AdminSupportCase>(accessToken, `/api/admin/sos-navigo/cases/${id}`);
+}
+
+export function registerAdminFoundPass(
+  accessToken: string,
+  payload: {
+    passNumber: string;
+    deskName?: string;
+  },
+) {
+  return adminFetch<AdminFoundPassResponse>(accessToken, "/api/admin/sos-navigo/found-pass", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function notifyAdminSosNavigoCase(accessToken: string, id: string) {
+  return adminFetch<AdminSupportCase>(accessToken, `/api/admin/sos-navigo/cases/${id}/notify`, {
+    method: "PATCH",
+  });
+}
+
+export function updateAdminSosNavigoCaseStatus(
+  accessToken: string,
+  id: string,
+  status: Extract<
+    AdminSupportCaseStatus,
+    "IN_PROGRESS" | "PASS_FOUND_WAITING_PICKUP" | "PASS_PICKED_UP" | "RESOLVED"
+  >,
+) {
+  return adminFetch<AdminSupportCase>(accessToken, `/api/admin/sos-navigo/cases/${id}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
   });

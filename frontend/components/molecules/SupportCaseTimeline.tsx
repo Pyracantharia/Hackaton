@@ -11,7 +11,15 @@ function buildSteps(chosenResolution: SupportCaseResolution | null) {
       ? "Solution temporaire demandee"
       : "Pass physique a desactiver";
 
-  return ["Declaration recue", "Verification en cours", resolutionStep, "Demande traitee"];
+  return [
+    "Declaration recue",
+    "Verification en cours",
+    resolutionStep,
+    "Pass retrouve",
+    "Client notifie",
+    "Pass recupere",
+    "Choix final enregistre",
+  ];
 }
 
 function getActiveIndex(status: SupportCaseStatus) {
@@ -23,8 +31,14 @@ function getActiveIndex(status: SupportCaseStatus) {
     case "TRANSFER_TO_PHONE_REQUESTED":
     case "PASS_DEACTIVATION_REQUESTED":
       return 2;
+    case "PASS_FOUND_WAITING_PICKUP":
+      return 4;
+    case "PASS_PICKED_UP":
+      return 5;
+    case "DIGITAL_SUPPORT_CONFIRMED":
+    case "PHYSICAL_PASS_REACTIVATION_REQUESTED":
     case "RESOLVED":
-      return 3;
+      return 6;
     default:
       return 0;
   }

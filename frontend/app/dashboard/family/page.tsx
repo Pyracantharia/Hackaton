@@ -1,7 +1,9 @@
 "use client";
 
 import { Suspense, startTransition, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Button } from "@/components/atoms/Button";
 import { InfoBox } from "@/components/molecules/InfoBox";
 import { AddHouseholdMemberModal } from "@/components/organisms/AddHouseholdMemberModal";
 import { AddMemberPanel } from "@/components/organisms/AddMemberPanel";
@@ -19,6 +21,9 @@ import {
   addHouseholdMember,
   createLostPassSupportCase,
   getMyHouseholdDashboard,
+  getRecoveredSupportAlerts,
+  markSupportCasePickedUp,
+  registerSupportCaseFinalChoice,
 } from "@/lib/api/households";
 import type {
   AddHouseholdMemberPayload,
@@ -26,6 +31,8 @@ import type {
   LostPassPayload,
   LostPassResponse,
   RegisterMemberType,
+  SupportCaseFinalChoice,
+  SupportCaseSummary,
 } from "@/lib/api/types";
 
 type FlashMessage = {
@@ -55,6 +62,67 @@ function buildSummaryItems(data: HouseholdDashboardResponse) {
     `${data.summary.offersToCheckCount} offre a etudier`,
     `${data.summary.urgentActionsCount} action urgente`,
   ];
+}
+
+function RecoveredPassModal({
+  supportCase,
+  isSubmitting,
+  onClose,
+  onChoose,
+}: {
+  supportCase: SupportCaseSummary | null;
+  isSubmitting: boolean;
+  onClose: () => void;
+  onChoose: (finalChoice: SupportCaseFinalChoice) => void;
+}) {
+  if (!supportCase) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-idfm-anthracite/50 px-4 py-8" role="dialog" aria-modal="true">
+      <section className="w-full max-w-xl rounded-md bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase text-idfm-interaction">{supportCase.dossierNumber}</p>
+            <h2 className="mt-1 text-2xl font-bold text-idfm-anthracite">Pass recupere</h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-medium">
+              Confirmez comment vous souhaitez continuer pour {supportCase.memberName ?? "ce profil"}.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="rounded-md px-3 py-2 text-sm font-semibold text-idfm-interaction hover:bg-idfm-light"
+            onClick={onClose}
+          >
+            Fermer
+          </button>
+        </div>
+
+        <div className="mt-5 rounded-md border border-neutral-light bg-neutral-xlight p-4 text-sm text-idfm-anthracite">
+          <p><span className="font-semibold">Pass :</span> {supportCase.passNumberMasked ?? "****"}</p>
+          <p className="mt-2"><span className="font-semibold">Guichet :</span> {supportCase.foundDeskName ?? supportCase.foundLocation ?? "Guichet indique"}</p>
+          <p className="mt-2"><span className="font-semibold">Adresse :</span> {supportCase.foundDeskAddress ?? "Adresse communiquee par l'agent"}</p>
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <Button
+            type="button"
+            disabled={isSubmitting}
+            onClick={() => onChoose("DIGITAL_SUPPORT")}
+          >
+            Rester sur support digital
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={isSubmitting}
+            onClick={() => onChoose("PHYSICAL_PASS_REACTIVATION")}
+          >
+            Reactiver mon pass
+          </Button>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function FamilyDashboardFallback() {
@@ -88,6 +156,9 @@ function FamilyDashboardPageContent() {
   const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>(undefined);
   const [isSubmittingLostPass, setIsSubmittingLostPass] = useState(false);
   const [sosRefreshSignal, setSosRefreshSignal] = useState(0);
+  const [recoveredAlerts, setRecoveredAlerts] = useState<SupportCaseSummary[]>([]);
+  const [selectedRecoveredCase, setSelectedRecoveredCase] = useState<SupportCaseSummary | null>(null);
+  const [isSubmittingRecoveredChoice, setIsSubmittingRecoveredChoice] = useState(false);
   const activeTab = getActiveTab(searchParams.get("tab"));
 
   function openLostPassFlow(memberId?: string) {
@@ -126,10 +197,14 @@ function FamilyDashboardPageContent() {
       return;
     }
 
-    void getMyHouseholdDashboard(accessToken)
-      .then((response) => {
+    void Promise.all([
+      getMyHouseholdDashboard(accessToken),
+      getRecoveredSupportAlerts(accessToken),
+    ])
+      .then(([dashboardResponse, alertsResponse]) => {
         startTransition(() => {
-          setData(response);
+          setData(dashboardResponse);
+          setRecoveredAlerts(alertsResponse);
         });
       })
       .catch((error: Error) => {
@@ -193,6 +268,41 @@ function FamilyDashboardPageContent() {
       return response;
     } finally {
       setIsSubmittingLostPass(false);
+    }
+  }
+
+  async function handleRecoveredFinalChoice(finalChoice: SupportCaseFinalChoice) {
+    const accessToken = localStorage.getItem("familyAccessToken");
+
+    if (!accessToken || !selectedRecoveredCase) {
+      setFlash({ message: "Reconnectez-vous pour confirmer la recuperation du pass.", tone: "red" });
+      return;
+    }
+
+    setIsSubmittingRecoveredChoice(true);
+
+    try {
+      await markSupportCasePickedUp(accessToken, selectedRecoveredCase.id);
+      await registerSupportCaseFinalChoice(accessToken, selectedRecoveredCase.id, { finalChoice });
+
+      startTransition(() => {
+        setRecoveredAlerts((current) => current.filter((supportCase) => supportCase.id !== selectedRecoveredCase.id));
+        setSelectedRecoveredCase(null);
+        setSosRefreshSignal((current) => current + 1);
+        setFlash({
+          message: finalChoice === "DIGITAL_SUPPORT"
+            ? "Votre pass est recupere. Votre titre reste sur support digital."
+            : "Votre pass est recupere. La demande de reactivation est enregistree.",
+          tone: "green",
+        });
+      });
+    } catch (error) {
+      setFlash({
+        message: error instanceof Error ? error.message : "Impossible d'enregistrer votre choix pour le moment.",
+        tone: "red",
+      });
+    } finally {
+      setIsSubmittingRecoveredChoice(false);
     }
   }
 
@@ -340,6 +450,36 @@ function FamilyDashboardPageContent() {
 
         {flash ? <InfoBox tone={flash.tone}>{flash.message}</InfoBox> : null}
 
+        {recoveredAlerts.length ? (
+          <section className="grid gap-3 rounded-md border border-status-successLight bg-green-50 p-5 text-status-success">
+            {recoveredAlerts.map((supportCase) => (
+              <div key={supportCase.id} className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-bold uppercase">Pass Navigo retrouve</p>
+                  <h2 className="mt-1 text-xl font-bold">
+                    {supportCase.memberName ?? "Un profil du foyer"} peut recuperer son pass
+                  </h2>
+                  <p className="mt-1 text-sm">
+                    {supportCase.foundDeskName ?? supportCase.foundLocation ?? "Guichet indique"}
+                    {supportCase.foundDeskAddress ? ` - ${supportCase.foundDeskAddress}` : ""} - {supportCase.passNumberMasked ?? "****"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href={`/dashboard/family/support-cases/${supportCase.id}`}
+                    className="inline-flex min-h-12 items-center justify-center rounded-md border border-status-success bg-white px-5 text-sm font-semibold text-status-success transition hover:bg-green-100"
+                  >
+                    Voir le detail
+                  </Link>
+                  <Button type="button" onClick={() => setSelectedRecoveredCase(supportCase)}>
+                    J&apos;ai recupere mon pass
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </section>
+        ) : null}
+
         {renderActiveSection()}
       </div>
 
@@ -363,6 +503,13 @@ function FamilyDashboardPageContent() {
           onSubmit={handleAddMemberSubmit}
         />
       ) : null}
+
+      <RecoveredPassModal
+        supportCase={selectedRecoveredCase}
+        isSubmitting={isSubmittingRecoveredChoice}
+        onClose={() => setSelectedRecoveredCase(null)}
+        onChoose={handleRecoveredFinalChoice}
+      />
     </DashboardLayout>
   );
 }

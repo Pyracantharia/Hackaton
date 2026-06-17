@@ -4,11 +4,13 @@ import type {
   CancelSupportCaseResponse,
   FoundPassPayload,
   FoundPassResponse,
+  FinalChoicePayload,
   HouseholdDashboardResponse,
   LostPassPayload,
   LostPassResponse,
   MemberDetailResponse,
   SupportCaseDetail,
+  SupportCaseSummary,
   SupportCasesListResponse,
 } from "./types";
 
@@ -159,4 +161,57 @@ export async function createFoundPassSupportCase(
   }
 
   return response.json() as Promise<FoundPassResponse>;
+}
+
+export async function getRecoveredSupportAlerts(accessToken: string): Promise<SupportCaseSummary[]> {
+  const response = await fetch(buildApiUrl("/api/support-cases/recovered-alerts"), {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json() as Promise<SupportCaseSummary[]>;
+}
+
+export async function markSupportCasePickedUp(
+  accessToken: string,
+  supportCaseId: string,
+): Promise<SupportCaseDetail> {
+  const response = await fetch(buildApiUrl(`/api/support-cases/${supportCaseId}/picked-up`), {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json() as Promise<SupportCaseDetail>;
+}
+
+export async function registerSupportCaseFinalChoice(
+  accessToken: string,
+  supportCaseId: string,
+  payload: FinalChoicePayload,
+): Promise<SupportCaseDetail> {
+  const response = await fetch(buildApiUrl(`/api/support-cases/${supportCaseId}/final-choice`), {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json() as Promise<SupportCaseDetail>;
 }
