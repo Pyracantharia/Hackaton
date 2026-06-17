@@ -37,6 +37,7 @@ function getActiveIndex(status: SupportCaseStatus) {
       return 5;
     case "DIGITAL_SUPPORT_CONFIRMED":
     case "PHYSICAL_PASS_REACTIVATION_REQUESTED":
+    case "PHYSICAL_PASS_REACTIVATED":
     case "RESOLVED":
       return 6;
     default:

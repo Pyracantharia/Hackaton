@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
 import { CreateAdminFoundPassDto } from "./dtos/create-admin-found-pass.dto";
+import { FinalChoiceAdminSosCaseDto } from "./dtos/final-choice-admin-sos-case.dto";
 import { UpdateAdminSosCaseStatusDto } from "./dtos/update-admin-sos-case-status.dto";
 import { UpdateAdminSubscriptionRequestDto } from "./dtos/update-admin-subscription-request.dto";
 import { UpdateAdminSupportCaseDto } from "./dtos/update-admin-support-case.dto";
@@ -16,6 +17,8 @@ const SOS_DESKS = [
   { name: "Saint-Denis Universite", address: "2 Rue Guynemer, 93200 Saint-Denis" },
   { name: "Versailles Chantiers", address: "4 Rue de l'Abbe Rousseaux, 78000 Versailles" },
 ];
+
+const PICKUP_DELAY_DAYS = 14;
 
 @Injectable()
 export class AdminService {
@@ -59,6 +62,7 @@ export class AdminService {
       "CANCELLED_BY_USER",
       "DIGITAL_SUPPORT_CONFIRMED",
       "PHYSICAL_PASS_REACTIVATION_REQUESTED",
+      "PHYSICAL_PASS_REACTIVATED",
     ].includes(status);
   }
 
@@ -66,7 +70,7 @@ export class AdminService {
     subscriptionRequests: Array<{ status: string }>;
     supportCases: Array<{ status: string }>;
   }) {
-    if (household.supportCases.some((supportCase) => supportCase.status !== "RESOLVED")) {
+    if (household.supportCases.some((supportCase) => !this.isSosClosed(supportCase.status))) {
       return "SUPPORT_OPEN";
     }
 
@@ -173,6 +177,10 @@ export class AdminService {
       clientNotifiedAt: supportCase.clientNotifiedAt?.toISOString() ?? null,
       pickedUpAt: supportCase.pickedUpAt?.toISOString() ?? null,
       finalChoiceAt: supportCase.finalChoiceAt?.toISOString() ?? null,
+      pickupDeadlineAt: supportCase.pickupDeadlineAt?.toISOString() ?? null,
+      passDestroyedAt: supportCase.passDestroyedAt?.toISOString() ?? null,
+      physicalPassReactivatedAt: supportCase.physicalPassReactivatedAt?.toISOString() ?? null,
+      digitalSupportRating: supportCase.digitalSupportRating,
       createdAt: supportCase.createdAt.toISOString(),
       updatedAt: supportCase.updatedAt.toISOString(),
       resolvedAt: supportCase.resolvedAt?.toISOString() ?? null,
@@ -630,8 +638,8 @@ export class AdminService {
         familiesCount: families.length,
         profilesCount,
         openSubscriptionRequestsCount: requests.filter((request) => openRequestStatuses.includes(request.status)).length,
-        lostPassesCount: supportCases.filter((supportCase) => supportCase.type === "LOST_PASS" && supportCase.status !== "RESOLVED").length,
-        foundPassesCount: supportCases.filter((supportCase) => supportCase.type === "FOUND_PASS" && supportCase.status !== "RESOLVED").length,
+        lostPassesCount: supportCases.filter((supportCase) => supportCase.type === "LOST_PASS" && !this.isSosClosed(supportCase.status)).length,
+        foundPassesCount: supportCases.filter((supportCase) => supportCase.type === "FOUND_PASS" && !this.isSosClosed(supportCase.status)).length,
         dossiersToReviewCount: requests.filter((request) => request.status === "UNDER_REVIEW" || request.status === "BLOCKED").length,
       },
       recentActivity,
@@ -861,6 +869,14 @@ export class AdminService {
         closedCasesCount: closedCases.length,
         resolutionRate: lostPassCases.length ? Math.round((closedCases.length / lostPassCases.length) * 100) : 0,
         averageDelayHours,
+        digitalSupportSatisfaction: (() => {
+          const ratings = supportCases
+            .map((supportCase) => supportCase.digitalSupportRating)
+            .filter((rating) => typeof rating === "number");
+          return ratings.length
+            ? Math.round((ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length) * 10) / 10
+            : null;
+        })(),
       },
       desks: SOS_DESKS,
       recentCases: supportCases.slice(0, 8).map((supportCase) => this.formatSupportCase(supportCase)),
@@ -949,6 +965,7 @@ export class AdminService {
             "PASS_PICKED_UP",
             "DIGITAL_SUPPORT_CONFIRMED",
             "PHYSICAL_PASS_REACTIVATION_REQUESTED",
+            "PHYSICAL_PASS_REACTIVATED",
           ],
         },
       },
@@ -968,6 +985,8 @@ export class AdminService {
     );
 
     if (matchedCase) {
+      const pickupDeadlineAt = new Date(foundAt);
+      pickupDeadlineAt.setDate(pickupDeadlineAt.getDate() + PICKUP_DELAY_DAYS);
       const updated = await this.prismaService.supportCase.update({
         where: { id: matchedCase.id },
         data: {
@@ -976,6 +995,7 @@ export class AdminService {
           foundDeskName: desk.name,
           foundDeskAddress: desk.address,
           foundAt,
+          pickupDeadlineAt,
           depositedAtDesk: true,
         },
         include: {
@@ -1013,6 +1033,7 @@ export class AdminService {
         foundDeskName: desk.name,
         foundDeskAddress: desk.address,
         foundAt,
+        pickupDeadlineAt: new Date(foundAt.getTime() + PICKUP_DELAY_DAYS * 24 * 60 * 60 * 1000),
         depositedAtDesk: true,
         description: `Pass retrouve au guichet ${desk.name}.`,
       },
@@ -1114,6 +1135,180 @@ export class AdminService {
           householdId: updated.householdId,
           memberId: updated.memberId,
           label: `SOS Navigo : dossier passe au statut ${data.status}.`,
+        },
+      });
+    }
+
+    return this.formatSupportCase(updated);
+  }
+
+  async markSosNavigoCasePickedUp(id: string) {
+    const supportCase = await this.prismaService.supportCase.findFirst({
+      where: { id, type: "LOST_PASS", status: "PASS_FOUND_WAITING_PICKUP" },
+    });
+
+    if (!supportCase) {
+      throw new NotFoundException("Aucun pass retrouve en attente de recuperation pour ce dossier.");
+    }
+
+    const updated = await this.prismaService.$transaction(async (tx) => {
+      const pickedUp = await tx.supportCase.update({
+        where: { id: supportCase.id },
+        data: {
+          status: "PASS_PICKED_UP",
+          pickedUpAt: new Date(),
+        },
+        include: {
+          household: { include: { owner: true } },
+          member: {
+            include: {
+              subscriptions: { orderBy: { updatedAt: "desc" }, take: 1 },
+            },
+          },
+        },
+      });
+
+      if (supportCase.memberId) {
+        const subscription = await tx.subscription.findFirst({
+          where: { householdMemberId: supportCase.memberId },
+          orderBy: { updatedAt: "desc" },
+        });
+
+        if (subscription) {
+          await tx.subscription.update({
+            where: { id: subscription.id },
+            data: {
+              status: "ACTIVE",
+              nextActionLabel: "Pass physique recupere - choisir le support final",
+            },
+          });
+        }
+      }
+
+      if (supportCase.householdId) {
+        await tx.householdActivity.create({
+          data: {
+            householdId: supportCase.householdId,
+            memberId: supportCase.memberId,
+            label: "SOS Navigo : pass recupere au guichet par le client.",
+          },
+        });
+      }
+
+      return pickedUp;
+    });
+
+    return this.formatSupportCase(updated);
+  }
+
+  async registerAdminSosNavigoFinalChoice(id: string, data: FinalChoiceAdminSosCaseDto) {
+    const supportCase = await this.prismaService.supportCase.findFirst({
+      where: {
+        id,
+        type: "LOST_PASS",
+        status: { in: ["PASS_FOUND_WAITING_PICKUP", "PASS_PICKED_UP"] },
+      },
+    });
+
+    if (!supportCase) {
+      throw new NotFoundException("Ce dossier ne peut pas recevoir de choix final.");
+    }
+
+    if (supportCase.status === "PASS_FOUND_WAITING_PICKUP" && data.finalChoice !== "DIGITAL_SUPPORT") {
+      throw new NotFoundException("Le pass doit etre marque recupere avant de reactiver le support physique.");
+    }
+
+    const finalStatus = data.finalChoice === "DIGITAL_SUPPORT"
+      ? "DIGITAL_SUPPORT_CONFIRMED"
+      : "PHYSICAL_PASS_REACTIVATED";
+
+    const now = new Date();
+    const updated = await this.prismaService.$transaction(async (tx) => {
+      const chosen = await tx.supportCase.update({
+        where: { id: supportCase.id },
+        data: {
+          status: finalStatus,
+          finalChoice: data.finalChoice,
+          finalChoiceAt: now,
+          digitalSupportRating: data.digitalSupportRating ?? supportCase.digitalSupportRating,
+          physicalPassReactivatedAt: data.finalChoice === "PHYSICAL_PASS_REACTIVATION" ? now : null,
+          resolvedAt: now,
+        },
+        include: {
+          household: { include: { owner: true } },
+          member: {
+            include: {
+              subscriptions: { orderBy: { updatedAt: "desc" }, take: 1 },
+            },
+          },
+        },
+      });
+
+      if (supportCase.memberId) {
+        const subscription = await tx.subscription.findFirst({
+          where: { householdMemberId: supportCase.memberId },
+          orderBy: { updatedAt: "desc" },
+        });
+
+        if (subscription) {
+          await tx.subscription.update({
+            where: { id: subscription.id },
+            data: {
+              status: "ACTIVE",
+              nextActionLabel: data.finalChoice === "DIGITAL_SUPPORT"
+                ? "Titre conserve sur smartphone"
+                : null,
+            },
+          });
+        }
+      }
+
+      if (supportCase.householdId) {
+        await tx.householdActivity.create({
+          data: {
+            householdId: supportCase.householdId,
+            memberId: supportCase.memberId,
+            label: data.finalChoice === "DIGITAL_SUPPORT"
+              ? "SOS Navigo : support digital definitif enregistre par agent."
+              : "SOS Navigo : titre remis sur pass physique par agent.",
+          },
+        });
+      }
+
+      return chosen;
+    });
+
+    return this.formatSupportCase(updated);
+  }
+
+  async destroySosNavigoPass(id: string) {
+    const supportCase = await this.prismaService.supportCase.findFirst({
+      where: { id, type: "LOST_PASS", status: "DIGITAL_SUPPORT_CONFIRMED" },
+    });
+
+    if (!supportCase) {
+      throw new NotFoundException("Seul un dossier digital definitif peut etre marque comme detruit.");
+    }
+
+    const updated = await this.prismaService.supportCase.update({
+      where: { id },
+      data: { passDestroyedAt: new Date() },
+      include: {
+        household: { include: { owner: true } },
+        member: {
+          include: {
+            subscriptions: { orderBy: { updatedAt: "desc" }, take: 1 },
+          },
+        },
+      },
+    });
+
+    if (updated.householdId) {
+      await this.prismaService.householdActivity.create({
+        data: {
+          householdId: updated.householdId,
+          memberId: updated.memberId,
+          label: "SOS Navigo : pass physique detruit apres choix digital definitif.",
         },
       });
     }

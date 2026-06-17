@@ -3,6 +3,7 @@ import { JwtAuthGuard } from "src/auth/guards/jwt-auth.guard";
 import { AdminRoleGuard } from "./admin-role.guard";
 import { AdminService } from "./admin.service";
 import { CreateAdminFoundPassDto } from "./dtos/create-admin-found-pass.dto";
+import { FinalChoiceAdminSosCaseDto } from "./dtos/final-choice-admin-sos-case.dto";
 import { UpdateAdminSosCaseStatusDto } from "./dtos/update-admin-sos-case-status.dto";
 import { UpdateAdminSubscriptionRequestDto } from "./dtos/update-admin-subscription-request.dto";
 import { UpdateAdminSupportCaseDto } from "./dtos/update-admin-support-case.dto";
@@ -94,6 +95,24 @@ export class AdminController {
     @Body() data: UpdateAdminSosCaseStatusDto,
   ) {
     return this.adminService.updateSosNavigoCaseStatus(id, data);
+  }
+
+  @Patch("sos-navigo/cases/:id/picked-up")
+  async markSosNavigoCasePickedUp(@Param("id") id: string) {
+    return this.adminService.markSosNavigoCasePickedUp(id);
+  }
+
+  @Patch("sos-navigo/cases/:id/final-choice")
+  async registerAdminSosNavigoFinalChoice(
+    @Param("id") id: string,
+    @Body() data: FinalChoiceAdminSosCaseDto,
+  ) {
+    return this.adminService.registerAdminSosNavigoFinalChoice(id, data);
+  }
+
+  @Patch("sos-navigo/cases/:id/destroy-pass")
+  async destroySosNavigoPass(@Param("id") id: string) {
+    return this.adminService.destroySosNavigoPass(id);
   }
 
   @Patch("support-cases/:id")

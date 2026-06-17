@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "../atoms/Button";
 import { Checkbox } from "../atoms/Checkbox";
 import { FormError } from "../atoms/FormError";
@@ -76,19 +76,6 @@ export function LostPassFlow({
   const [error, setError] = useState("");
   const [createdCase, setCreatedCase] = useState<LostPassResponse["supportCase"] | null>(null);
   const [showFinalConfirm, setShowFinalConfirm] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setStep(singleMember ? 1 : 0);
-      setMemberId(defaultMemberId ?? members[0]?.id ?? "");
-      setReason(null);
-      setResolution(null);
-      setUnderstands(false);
-      setError("");
-      setCreatedCase(null);
-      setShowFinalConfirm(false);
-    }
-  }, [isOpen, defaultMemberId, singleMember, members]);
 
   const selectedMember = useMemo(
     () => members.find((member) => member.id === memberId) ?? null,
@@ -293,8 +280,8 @@ export function LostPassFlow({
               <div className="grid gap-3 sm:grid-cols-2">
                 <ResolutionChoiceCard
                   title="Transferer le titre sur mon telephone"
-                  description="Votre titre est transfere sur votre telephone si le profil est compatible. Le pass physique est desactive pour eviter la fraude."
-                  note="Transfert simule pour cette demonstration (MVP)."
+                  description="Votre titre est disponible sur votre telephone de facon temporaire pendant le traitement. Le pass physique est desactive pour eviter la fraude."
+                  note="Le dossier reste ouvert jusqu'au choix final ou a la recuperation au guichet."
                   ctaLabel="Effectuer le transfert"
                   selected={resolution === "TRANSFER_TO_PHONE"}
                   onSelect={() => selectResolution("TRANSFER_TO_PHONE")}
@@ -367,7 +354,7 @@ export function LostPassFlow({
                 name="lost-pass-understands"
                 checked={understands}
                 onChange={(event) => setUnderstands(event.target.checked)}
-                label="Je comprends que le pass physique pourra etre desactive."
+                label="Je comprends que le pass physique sera desactive."
               />
             </div>
           ) : null}
@@ -490,7 +477,7 @@ export function LostPassFlow({
             </h3>
             <p className="mt-2 text-sm leading-6 text-neutral-medium">
               {resolution === "TRANSFER_TO_PHONE"
-                ? "Votre pass physique sera immediatement desactive et votre titre transfere sur votre smartphone. Cette action est definitive."
+                ? "Votre pass physique sera immediatement desactive et votre titre sera disponible temporairement sur smartphone. Le dossier restera ouvert jusqu'au choix final."
                 : "Votre pass physique sera desactive. Vous pourrez annuler tant qu'un agent n'a pas traite la demande."}
             </p>
 

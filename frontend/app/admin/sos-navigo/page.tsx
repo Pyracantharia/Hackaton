@@ -9,18 +9,19 @@ import { EmptyState } from "@/components/molecules/EmptyState";
 import { InfoBox } from "@/components/molecules/InfoBox";
 import { DashboardLayout } from "@/components/templates/DashboardLayout";
 import {
+  destroyAdminSosNavigoPass,
   getAdminSosNavigoCase,
   getAdminSosNavigoCases,
   getAdminSosNavigoDashboard,
+  markAdminSosNavigoCasePickedUp,
   notifyAdminSosNavigoCase,
   registerAdminFoundPass,
-  updateAdminSosNavigoCaseStatus,
+  registerAdminSosNavigoFinalChoice,
 } from "@/lib/api/admin";
 import type {
   AdminSosDashboardResponse,
   AdminSosFilter,
   AdminSupportCase,
-  AdminSupportCaseStatus,
 } from "@/lib/api/types";
 import {
   finalChoiceLabels,
@@ -45,13 +46,6 @@ const filterLabels: Record<AdminSosFilter, string> = {
   "waiting-pickup": "Attente recuperation",
   closed: "Cloture",
   cancelled: "Annule",
-};
-
-const statusActionLabels: Partial<Record<AdminSupportCaseStatus, string>> = {
-  IN_PROGRESS: "Marquer en cours",
-  PASS_FOUND_WAITING_PICKUP: "Marquer pass retrouve",
-  PASS_PICKED_UP: "Marquer recupere",
-  RESOLVED: "Cloturer",
 };
 
 function parseStoredUser(value: string | null): StoredUser | null {
@@ -114,6 +108,7 @@ function CaseTimeline({ supportCase }: { supportCase: AdminSupportCase }) {
     { label: "Client notifie", value: supportCase.clientNotifiedAt },
     { label: "Pass recupere", value: supportCase.pickedUpAt },
     { label: "Choix final", value: supportCase.finalChoiceAt },
+    { label: "Pass detruit", value: supportCase.passDestroyedAt },
     { label: "Cloture", value: supportCase.resolvedAt },
   ];
 
@@ -137,15 +132,23 @@ function CaseModal({
   isBusy,
   onClose,
   onNotify,
-  onStatus,
+  onPickedUp,
+  onFinalChoice,
+  onDestroyPass,
 }: {
   supportCase: AdminSupportCase | null;
   isBusy: boolean;
   onClose: () => void;
   onNotify: () => void;
-  onStatus: (status: Extract<AdminSupportCaseStatus, "IN_PROGRESS" | "PASS_FOUND_WAITING_PICKUP" | "PASS_PICKED_UP" | "RESOLVED">) => void;
+  onPickedUp: () => void;
+  onFinalChoice: (finalChoice: "DIGITAL_SUPPORT" | "PHYSICAL_PASS_REACTIVATION") => void;
+  onDestroyPass: () => void;
 }) {
+  const [renderedAt] = useState(() => Date.now());
   if (!supportCase) return null;
+  const isPickupLate = supportCase.pickupDeadlineAt
+    ? new Date(supportCase.pickupDeadlineAt).getTime() < renderedAt && supportCase.status === "PASS_FOUND_WAITING_PICKUP"
+    : false;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-idfm-anthracite/50 px-4 py-8" role="dialog" aria-modal="true">
@@ -168,7 +171,10 @@ function CaseModal({
             <section className="rounded-md border border-neutral-light p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h3 className="font-bold text-idfm-anthracite">Informations dossier</h3>
-                <Badge tone={supportCaseStatusTones[supportCase.status]}>{supportCaseStatusLabels[supportCase.status]}</Badge>
+                <div className="flex flex-wrap gap-2">
+                  {isPickupLate ? <Badge tone="red">En retard</Badge> : null}
+                  <Badge tone={supportCaseStatusTones[supportCase.status]}>{supportCaseStatusLabels[supportCase.status]}</Badge>
+                </div>
               </div>
               <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                 <div>
@@ -198,9 +204,35 @@ function CaseModal({
                   <dd className="mt-1 text-idfm-anthracite">{supportCase.foundDeskAddress ?? "Non renseignee"}</dd>
                 </div>
                 <div>
+                  <dt className="font-semibold text-neutral-medium">Date limite de retrait</dt>
+                  <dd className="mt-1 text-idfm-anthracite">{formatDateTime(supportCase.pickupDeadlineAt)}</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-neutral-medium">Notification client</dt>
+                  <dd className="mt-1 text-idfm-anthracite">
+                    {supportCase.clientNotifiedAt ? `Envoyee le ${formatDateTime(supportCase.clientNotifiedAt)}` : "Non envoyee"}
+                  </dd>
+                </div>
+                <div>
                   <dt className="font-semibold text-neutral-medium">Choix final</dt>
                   <dd className="mt-1 text-idfm-anthracite">
                     {supportCase.finalChoice ? finalChoiceLabels[supportCase.finalChoice] : "Non renseigne"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-neutral-medium">Satisfaction digital</dt>
+                  <dd className="mt-1 text-idfm-anthracite">
+                    {supportCase.digitalSupportRating ? `${supportCase.digitalSupportRating}/10` : "Non renseignee"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-neutral-medium">Pass physique</dt>
+                  <dd className="mt-1 text-idfm-anthracite">
+                    {supportCase.passDestroyedAt
+                      ? `Detruit le ${formatDateTime(supportCase.passDestroyedAt)}`
+                      : supportCase.physicalPassReactivatedAt
+                        ? `Reactive le ${formatDateTime(supportCase.physicalPassReactivatedAt)}`
+                        : "En attente"}
                   </dd>
                 </div>
                 <div>
@@ -213,20 +245,46 @@ function CaseModal({
             <section className="rounded-md border border-neutral-light p-4">
               <h3 className="font-bold text-idfm-anthracite">Actions agent</h3>
               <div className="mt-4 flex flex-wrap gap-3">
-                {(["IN_PROGRESS", "PASS_FOUND_WAITING_PICKUP", "PASS_PICKED_UP", "RESOLVED"] as const).map((status) => (
-                  <Button
-                    key={status}
-                    type="button"
-                    variant={supportCase.status === status ? "primary" : "secondary"}
-                    disabled={isBusy}
-                    onClick={() => onStatus(status)}
-                  >
-                    {statusActionLabels[status]}
+                {supportCase.status === "PASS_FOUND_WAITING_PICKUP" ? (
+                  <>
+                    <Button type="button" variant="secondary" disabled={isBusy || !supportCase.household} onClick={onNotify}>
+                      Notifier client
+                    </Button>
+                    <Button type="button" disabled={isBusy} onClick={onPickedUp}>
+                      Marquer recupere au guichet
+                    </Button>
+                    <Button type="button" variant="ghost" disabled={isBusy} onClick={() => onFinalChoice("DIGITAL_SUPPORT")}>
+                      Client reste en digital
+                    </Button>
+                  </>
+                ) : null}
+
+                {supportCase.status === "PASS_PICKED_UP" ? (
+                  <>
+                    <Button type="button" disabled={isBusy} onClick={() => onFinalChoice("PHYSICAL_PASS_REACTIVATION")}>
+                      Remettre le titre sur pass physique
+                    </Button>
+                    <Button type="button" variant="secondary" disabled={isBusy} onClick={() => onFinalChoice("DIGITAL_SUPPORT")}>
+                      Laisser le titre en digital
+                    </Button>
+                  </>
+                ) : null}
+
+                {supportCase.status === "DIGITAL_SUPPORT_CONFIRMED" && !supportCase.passDestroyedAt ? (
+                  <Button type="button" variant="secondary" disabled={isBusy} onClick={onDestroyPass}>
+                    Marquer le pass physique detruit
                   </Button>
-                ))}
-                <Button type="button" variant="ghost" disabled={isBusy || !supportCase.household} onClick={onNotify}>
-                  Notifier client
-                </Button>
+                ) : null}
+
+                {["TRANSFER_TO_PHONE_REQUESTED", "PASS_DEACTIVATION_REQUESTED"].includes(supportCase.status) ? (
+                  <InfoBox className="w-full" tone="blue">
+                    Pour faire evoluer ce dossier, utilisez le formulaire “Enregistrer un pass retrouve” avec le numero masque et le guichet.
+                  </InfoBox>
+                ) : null}
+
+                {["DIGITAL_SUPPORT_CONFIRMED", "PHYSICAL_PASS_REACTIVATED", "RESOLVED", "CANCELLED_BY_USER"].includes(supportCase.status) ? (
+                  <InfoBox className="w-full" tone="green">Dossier finalise. Aucune action agent necessaire.</InfoBox>
+                ) : null}
               </div>
             </section>
           </div>
@@ -399,6 +457,7 @@ export default function AdminSosNavigoPage() {
           <KpiCard label="Pass retrouves" value={stats?.foundTodayCount ?? 0} helper="Signales aujourd'hui" tone="green" />
           <KpiCard label="Attente guichet" value={stats?.waitingPickupCount ?? 0} helper="Clients a recuperer" tone="blue" />
           <KpiCard label="Taux cloture" value={`${stats?.resolutionRate ?? 0}%`} helper={`${stats?.averageDelayHours ?? 0}h moy.`} tone="green" />
+          <KpiCard label="Satisfaction digital" value={stats?.digitalSupportSatisfaction ? `${stats.digitalSupportSatisfaction}/10` : "-"} helper="Note moyenne client" tone="blue" />
         </section>
 
         <section className="grid gap-4 rounded-md border border-neutral-light bg-white p-4 shadow-sm lg:grid-cols-[1fr_360px]">
@@ -532,11 +591,25 @@ export default function AdminSosNavigoPage() {
             "Client notifie.",
           );
         }}
-        onStatus={(status) => {
+        onPickedUp={() => {
           if (!selectedCase) return;
           void mutateSelectedCase(
-            () => updateAdminSosNavigoCaseStatus(getAccessToken() ?? "", selectedCase.id, status),
-            "Statut mis a jour.",
+            () => markAdminSosNavigoCasePickedUp(getAccessToken() ?? "", selectedCase.id),
+            "Pass marque recupere au guichet.",
+          );
+        }}
+        onFinalChoice={(finalChoice) => {
+          if (!selectedCase) return;
+          void mutateSelectedCase(
+            () => registerAdminSosNavigoFinalChoice(getAccessToken() ?? "", selectedCase.id, { finalChoice }),
+            "Choix final enregistre.",
+          );
+        }}
+        onDestroyPass={() => {
+          if (!selectedCase) return;
+          void mutateSelectedCase(
+            () => destroyAdminSosNavigoPass(getAccessToken() ?? "", selectedCase.id),
+            "Pass physique marque detruit.",
           );
         }}
       />

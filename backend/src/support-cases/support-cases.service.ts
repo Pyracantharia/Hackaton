@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -26,6 +27,14 @@ const CANCELLABLE_STATUSES: SupportCaseStatus[] = [
   "IN_PROGRESS",
   "TRANSFER_TO_PHONE_REQUESTED",
   "PASS_DEACTIVATION_REQUESTED",
+];
+
+const CLOSED_LOST_PASS_STATUSES: SupportCaseStatus[] = [
+  "RESOLVED",
+  "CANCELLED_BY_USER",
+  "DIGITAL_SUPPORT_CONFIRMED",
+  "PHYSICAL_PASS_REACTIVATION_REQUESTED",
+  "PHYSICAL_PASS_REACTIVATED",
 ];
 
 @Injectable()
@@ -80,6 +89,8 @@ export class SupportCasesService {
         return "Support digital confirme";
       case "PHYSICAL_PASS_REACTIVATION_REQUESTED":
         return "Reactivation du pass demandee";
+      case "PHYSICAL_PASS_REACTIVATED":
+        return "Pass physique reactive";
       case "RESOLVED":
         return "Demande traitee";
       case "CANCELLED_BY_USER":
@@ -107,6 +118,8 @@ export class SupportCasesService {
         return "Votre titre reste sur support digital.";
       case "PHYSICAL_PASS_REACTIVATION_REQUESTED":
         return "La reactivation du pass physique est enregistree.";
+      case "PHYSICAL_PASS_REACTIVATED":
+        return "Votre titre est de nouveau actif sur le pass physique.";
       case "RESOLVED":
         return "Votre demande a ete traitee.";
       case "CANCELLED_BY_USER":
@@ -149,6 +162,10 @@ export class SupportCasesService {
       pickedUpAt: supportCase.pickedUpAt?.toISOString() ?? null,
       finalChoice: supportCase.finalChoice,
       finalChoiceAt: supportCase.finalChoiceAt?.toISOString() ?? null,
+      pickupDeadlineAt: supportCase.pickupDeadlineAt?.toISOString() ?? null,
+      passDestroyedAt: supportCase.passDestroyedAt?.toISOString() ?? null,
+      physicalPassReactivatedAt: supportCase.physicalPassReactivatedAt?.toISOString() ?? null,
+      digitalSupportRating: supportCase.digitalSupportRating,
       cancellable: CANCELLABLE_STATUSES.includes(supportCase.status),
       createdAt: supportCase.createdAt.toISOString(),
       updatedAt: supportCase.updatedAt.toISOString(),
@@ -173,7 +190,7 @@ export class SupportCasesService {
   async createLostPassCase(userId: string, data: CreateLostPassDto) {
     if (data.understandsDeactivation !== true) {
       throw new BadRequestException(
-        "Vous devez confirmer avoir compris que le pass physique pourra etre desactive.",
+        "Vous devez confirmer avoir compris que le pass physique sera desactive.",
       );
     }
 
@@ -201,7 +218,7 @@ export class SupportCasesService {
       where: {
         memberId: member.id,
         type: "LOST_PASS",
-        status: { notIn: ["RESOLVED", "CANCELLED_BY_USER"] },
+        status: { notIn: CLOSED_LOST_PASS_STATUSES },
       },
     });
 
@@ -212,9 +229,9 @@ export class SupportCasesService {
     }
 
     const isTransfer = data.chosenResolution === "TRANSFER_TO_PHONE";
-    // Le transfert sur telephone est effectue instantanement (MVP simule).
-    // La desactivation seule reste une demande suivie et annulable.
-    const status = isTransfer ? "RESOLVED" : "PASS_DEACTIVATION_REQUESTED";
+    // Le support digital est active immediatement, mais le dossier reste ouvert
+    // jusqu'au choix final ou a la recuperation confirmee par un agent.
+    const status = isTransfer ? "TRANSFER_TO_PHONE_REQUESTED" : "PASS_DEACTIVATION_REQUESTED";
     const passNumberMasked = this.buildMaskedPassForMember(member.id);
 
     const createdCase = await this.prismaService.$transaction(async (tx) => {
@@ -228,7 +245,6 @@ export class SupportCasesService {
           chosenResolution: data.chosenResolution,
           passNumberMasked,
           description: `Declaration de perte (${data.reason}).`,
-          resolvedAt: isTransfer ? new Date() : null,
         },
       });
 
@@ -238,7 +254,7 @@ export class SupportCasesService {
           ? {
               // Le titre reste valable, desormais disponible sur smartphone.
               status: "ACTIVE",
-              nextActionLabel: "Titre disponible sur smartphone",
+              nextActionLabel: "Titre disponible sur smartphone temporairement",
             }
           : {
               status: "LOST",
@@ -276,7 +292,7 @@ export class SupportCasesService {
 
     return {
       message: isTransfer
-        ? "Le transfert sur votre smartphone a ete effectue. Votre pass physique est desactive."
+        ? "Le support digital temporaire est active. Votre pass physique est desactive."
         : "Votre declaration de perte a ete enregistree.",
       supportCase: {
         id: createdCase.id,
@@ -334,7 +350,7 @@ export class SupportCasesService {
       where: {
         householdId: household.id,
         type: "LOST_PASS",
-        status: "PASS_FOUND_WAITING_PICKUP",
+        status: { in: ["PASS_FOUND_WAITING_PICKUP", "PASS_PICKED_UP"] },
       },
       include: {
         member: {
@@ -349,59 +365,15 @@ export class SupportCasesService {
     return supportCases.map((supportCase) => this.serializeSupportCase(supportCase));
   }
 
-  async markPickedUp(userId: string, supportCaseId: string) {
-    const household = await this.getHouseholdForUser(userId);
-    const supportCase = await this.prismaService.supportCase.findFirst({
-      where: {
-        id: supportCaseId,
-        householdId: household.id,
-        type: "LOST_PASS",
-        status: "PASS_FOUND_WAITING_PICKUP",
-      },
-    });
-
-    if (!supportCase) {
-      throw new NotFoundException("Aucun pass retrouve en attente de recuperation pour ce dossier.");
-    }
-
-    const updated = await this.prismaService.$transaction(async (tx) => {
-      const pickedUp = await tx.supportCase.update({
-        where: { id: supportCase.id },
-        data: {
-          status: "PASS_PICKED_UP",
-          pickedUpAt: new Date(),
-        },
-      });
-
-      await tx.householdActivity.create({
-        data: {
-          householdId: household.id,
-          memberId: supportCase.memberId,
-          label: "Pass recupere au guichet.",
-        },
-      });
-
-      return pickedUp;
-    });
-
-    const refreshed = await this.prismaService.supportCase.findFirstOrThrow({
-      where: { id: updated.id },
-      include: {
-        member: {
-          include: {
-            subscriptions: { orderBy: { updatedAt: "desc" }, take: 1 },
-          },
-        },
-      },
-    });
-
-    return this.serializeSupportCase(refreshed);
+  async markPickedUp(_userId: string, _supportCaseId: string) {
+    throw new ForbiddenException("Action reservee a un agent.");
   }
 
   async registerFinalChoice(
     userId: string,
     supportCaseId: string,
     finalChoice: "DIGITAL_SUPPORT" | "PHYSICAL_PASS_REACTIVATION",
+    digitalSupportRating: number,
   ) {
     const household = await this.getHouseholdForUser(userId);
     const supportCase = await this.prismaService.supportCase.findFirst({
@@ -417,9 +389,13 @@ export class SupportCasesService {
       throw new NotFoundException("Ce dossier ne peut pas recevoir de choix final.");
     }
 
+    if (supportCase.status === "PASS_FOUND_WAITING_PICKUP" && finalChoice !== "DIGITAL_SUPPORT") {
+      throw new BadRequestException("La reactivation du pass physique est possible seulement apres recuperation au guichet.");
+    }
+
     const status = finalChoice === "DIGITAL_SUPPORT"
       ? "DIGITAL_SUPPORT_CONFIRMED"
-      : "PHYSICAL_PASS_REACTIVATION_REQUESTED";
+      : "PHYSICAL_PASS_REACTIVATED";
 
     const updated = await this.prismaService.$transaction(async (tx) => {
       const chosen = await tx.supportCase.update({
@@ -428,9 +404,30 @@ export class SupportCasesService {
           status,
           finalChoice,
           finalChoiceAt: new Date(),
+          digitalSupportRating,
+          physicalPassReactivatedAt: finalChoice === "PHYSICAL_PASS_REACTIVATION" ? new Date() : null,
           resolvedAt: new Date(),
         },
       });
+
+      if (supportCase.memberId) {
+        const subscription = await tx.subscription.findFirst({
+          where: { householdMemberId: supportCase.memberId },
+          orderBy: { updatedAt: "desc" },
+        });
+
+        if (subscription) {
+          await tx.subscription.update({
+            where: { id: subscription.id },
+            data: {
+              status: "ACTIVE",
+              nextActionLabel: finalChoice === "DIGITAL_SUPPORT"
+                ? "Titre conserve sur smartphone"
+                : null,
+            },
+          });
+        }
+      }
 
       await tx.familyNotification.create({
         data: {
@@ -441,7 +438,7 @@ export class SupportCasesService {
           title: "Choix SOS Navigo enregistre",
           message: finalChoice === "DIGITAL_SUPPORT"
             ? "Votre titre reste sur support digital."
-            : "La demande de reactivation du pass physique est enregistree.",
+            : "Votre titre est de nouveau actif sur le pass physique.",
         },
       });
 
@@ -451,7 +448,7 @@ export class SupportCasesService {
           memberId: supportCase.memberId,
           label: finalChoice === "DIGITAL_SUPPORT"
             ? "Choix final SOS Navigo : support digital conserve."
-            : "Choix final SOS Navigo : reactivation du pass physique demandee.",
+            : "Choix final SOS Navigo : pass physique reactive.",
         },
       });
 
@@ -499,14 +496,14 @@ export class SupportCasesService {
       });
 
       if (supportCase.memberId) {
-        const lostSubscription = await tx.subscription.findFirst({
-          where: { householdMemberId: supportCase.memberId, status: "LOST" },
+        const latestSubscription = await tx.subscription.findFirst({
+          where: { householdMemberId: supportCase.memberId },
           orderBy: { updatedAt: "desc" },
         });
 
-        if (lostSubscription) {
+        if (latestSubscription) {
           await tx.subscription.update({
-            where: { id: lostSubscription.id },
+            where: { id: latestSubscription.id },
             data: {
               status: "ACTIVE",
               nextActionLabel: null,

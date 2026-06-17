@@ -174,11 +174,35 @@ export default function SupportCaseDetailPage() {
                   <dd className="text-right font-semibold text-idfm-anthracite">{detail.foundDeskAddress}</dd>
                 </div>
               ) : null}
+              {detail.pickupDeadlineAt ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-medium">Date limite de retrait</dt>
+                  <dd className="text-right font-semibold text-idfm-anthracite">
+                    {formatSupportCaseDate(detail.pickupDeadlineAt)}
+                  </dd>
+                </div>
+              ) : null}
               {detail.finalChoice ? (
                 <div className="flex justify-between gap-4">
                   <dt className="text-neutral-medium">Choix apres recuperation</dt>
                   <dd className="text-right font-semibold text-idfm-anthracite">
                     {finalChoiceLabels[detail.finalChoice]}
+                  </dd>
+                </div>
+              ) : null}
+              {detail.digitalSupportRating ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-medium">Note support digital</dt>
+                  <dd className="text-right font-semibold text-idfm-anthracite">{detail.digitalSupportRating}/10</dd>
+                </div>
+              ) : null}
+              {detail.passDestroyedAt || detail.physicalPassReactivatedAt ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-medium">Pass physique</dt>
+                  <dd className="text-right font-semibold text-idfm-anthracite">
+                    {detail.passDestroyedAt
+                      ? `Detruit le ${formatSupportCaseDate(detail.passDestroyedAt)}`
+                      : `Reactive le ${formatSupportCaseDate(detail.physicalPassReactivatedAt ?? detail.updatedAt)}`}
                   </dd>
                 </div>
               ) : null}
@@ -215,7 +239,11 @@ export default function SupportCaseDetailPage() {
           ) : detail.status === "PASS_FOUND_WAITING_PICKUP" ? (
             <InfoBox tone="green">
               Votre pass est disponible au guichet {detail.foundDeskName ?? detail.foundLocation ?? "indique"}.
-              Utilisez le bandeau de votre tableau de bord pour confirmer la recuperation.
+              Utilisez le bandeau de votre tableau de bord si vous souhaitez conserver le titre en digital.
+            </InfoBox>
+          ) : detail.status === "PASS_PICKED_UP" ? (
+            <InfoBox tone="green">
+              Votre pass a ete marque recupere au guichet. Utilisez le bandeau de votre tableau de bord pour choisir le support final.
             </InfoBox>
           ) : (
             <InfoBox>

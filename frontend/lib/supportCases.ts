@@ -16,6 +16,7 @@ export const supportCaseStatusLabels: Record<SupportCaseStatus, string> = {
   PASS_PICKED_UP: "Pass recupere",
   DIGITAL_SUPPORT_CONFIRMED: "Support digital conserve",
   PHYSICAL_PASS_REACTIVATION_REQUESTED: "Reactivation du pass demandee",
+  PHYSICAL_PASS_REACTIVATED: "Pass physique reactive",
   RESOLVED: "Demande traitee",
   CANCELLED_BY_USER: "Annulee",
 };
@@ -29,6 +30,7 @@ export const supportCaseStatusTones: Record<SupportCaseStatus, BadgeTone> = {
   PASS_PICKED_UP: "green",
   DIGITAL_SUPPORT_CONFIRMED: "green",
   PHYSICAL_PASS_REACTIVATION_REQUESTED: "blue",
+  PHYSICAL_PASS_REACTIVATED: "green",
   RESOLVED: "green",
   CANCELLED_BY_USER: "red",
 };

@@ -22,7 +22,6 @@ import {
   createLostPassSupportCase,
   getMyHouseholdDashboard,
   getRecoveredSupportAlerts,
-  markSupportCasePickedUp,
   registerSupportCaseFinalChoice,
 } from "@/lib/api/households";
 import type {
@@ -73,9 +72,11 @@ function RecoveredPassModal({
   supportCase: SupportCaseSummary | null;
   isSubmitting: boolean;
   onClose: () => void;
-  onChoose: (finalChoice: SupportCaseFinalChoice) => void;
+  onChoose: (finalChoice: SupportCaseFinalChoice, digitalSupportRating: number) => void;
 }) {
+  const [rating, setRating] = useState(8);
   if (!supportCase) return null;
+  const canReactivatePhysical = supportCase.status === "PASS_PICKED_UP";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-idfm-anthracite/50 px-4 py-8" role="dialog" aria-modal="true">
@@ -83,9 +84,13 @@ function RecoveredPassModal({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase text-idfm-interaction">{supportCase.dossierNumber}</p>
-            <h2 className="mt-1 text-2xl font-bold text-idfm-anthracite">Pass recupere</h2>
+            <h2 className="mt-1 text-2xl font-bold text-idfm-anthracite">
+              {canReactivatePhysical ? "Choisir mon support" : "Choix digital definitif"}
+            </h2>
             <p className="mt-2 text-sm leading-6 text-neutral-medium">
-              Confirmez comment vous souhaitez continuer pour {supportCase.memberName ?? "ce profil"}.
+              {canReactivatePhysical
+                ? `Confirmez comment vous souhaitez continuer pour ${supportCase.memberName ?? "ce profil"}.`
+                : "Si vous ne passez pas au guichet, votre titre restera en digital et le pass physique pourra etre detruit par un agent."}
             </p>
           </div>
           <button
@@ -101,24 +106,49 @@ function RecoveredPassModal({
           <p><span className="font-semibold">Pass :</span> {supportCase.passNumberMasked ?? "****"}</p>
           <p className="mt-2"><span className="font-semibold">Guichet :</span> {supportCase.foundDeskName ?? supportCase.foundLocation ?? "Guichet indique"}</p>
           <p className="mt-2"><span className="font-semibold">Adresse :</span> {supportCase.foundDeskAddress ?? "Adresse communiquee par l'agent"}</p>
+          {supportCase.pickupDeadlineAt ? (
+            <p className="mt-2"><span className="font-semibold">Date limite :</span> {new Intl.DateTimeFormat("fr-FR").format(new Date(supportCase.pickupDeadlineAt))}</p>
+          ) : null}
+        </div>
+
+        <div className="mt-5">
+          <label className="text-sm font-bold text-idfm-anthracite" htmlFor="digital-rating">
+            Comment avez-vous trouve le support digital pendant la perte de votre pass ?
+          </label>
+          <div className="mt-2 flex items-center gap-3">
+            <input
+              id="digital-rating"
+              type="range"
+              min="1"
+              max="10"
+              value={rating}
+              onChange={(event) => setRating(Number(event.target.value))}
+              className="w-full"
+            />
+            <span className="min-w-10 rounded-md bg-idfm-light px-3 py-2 text-center text-sm font-bold text-idfm-focus">
+              {rating}/10
+            </span>
+          </div>
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <Button
             type="button"
             disabled={isSubmitting}
-            onClick={() => onChoose("DIGITAL_SUPPORT")}
+            onClick={() => onChoose("DIGITAL_SUPPORT", rating)}
           >
             Rester sur support digital
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={isSubmitting}
-            onClick={() => onChoose("PHYSICAL_PASS_REACTIVATION")}
-          >
-            Reactiver mon pass
-          </Button>
+          {canReactivatePhysical ? (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isSubmitting}
+              onClick={() => onChoose("PHYSICAL_PASS_REACTIVATION", rating)}
+            >
+              Reactiver mon pass physique
+            </Button>
+          ) : null}
         </div>
       </section>
     </div>
@@ -271,7 +301,7 @@ function FamilyDashboardPageContent() {
     }
   }
 
-  async function handleRecoveredFinalChoice(finalChoice: SupportCaseFinalChoice) {
+  async function handleRecoveredFinalChoice(finalChoice: SupportCaseFinalChoice, digitalSupportRating: number) {
     const accessToken = localStorage.getItem("familyAccessToken");
 
     if (!accessToken || !selectedRecoveredCase) {
@@ -282,8 +312,7 @@ function FamilyDashboardPageContent() {
     setIsSubmittingRecoveredChoice(true);
 
     try {
-      await markSupportCasePickedUp(accessToken, selectedRecoveredCase.id);
-      await registerSupportCaseFinalChoice(accessToken, selectedRecoveredCase.id, { finalChoice });
+      await registerSupportCaseFinalChoice(accessToken, selectedRecoveredCase.id, { finalChoice, digitalSupportRating });
 
       startTransition(() => {
         setRecoveredAlerts((current) => current.filter((supportCase) => supportCase.id !== selectedRecoveredCase.id));
@@ -291,8 +320,8 @@ function FamilyDashboardPageContent() {
         setSosRefreshSignal((current) => current + 1);
         setFlash({
           message: finalChoice === "DIGITAL_SUPPORT"
-            ? "Votre pass est recupere. Votre titre reste sur support digital."
-            : "Votre pass est recupere. La demande de reactivation est enregistree.",
+            ? "Votre titre reste sur support digital. Votre choix definitif est enregistre."
+            : "Votre pass physique est reactive.",
           tone: "green",
         });
       });
@@ -457,11 +486,14 @@ function FamilyDashboardPageContent() {
                 <div>
                   <p className="text-sm font-bold uppercase">Pass Navigo retrouve</p>
                   <h2 className="mt-1 text-xl font-bold">
-                    {supportCase.memberName ?? "Un profil du foyer"} peut recuperer son pass
+                    {supportCase.status === "PASS_PICKED_UP"
+                      ? `${supportCase.memberName ?? "Un profil du foyer"} doit choisir son support final`
+                      : `${supportCase.memberName ?? "Un profil du foyer"} peut recuperer son pass`}
                   </h2>
                   <p className="mt-1 text-sm">
                     {supportCase.foundDeskName ?? supportCase.foundLocation ?? "Guichet indique"}
                     {supportCase.foundDeskAddress ? ` - ${supportCase.foundDeskAddress}` : ""} - {supportCase.passNumberMasked ?? "****"}
+                    {supportCase.pickupDeadlineAt ? ` - avant le ${new Intl.DateTimeFormat("fr-FR").format(new Date(supportCase.pickupDeadlineAt))}` : ""}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -472,7 +504,9 @@ function FamilyDashboardPageContent() {
                     Voir le detail
                   </Link>
                   <Button type="button" onClick={() => setSelectedRecoveredCase(supportCase)}>
-                    J&apos;ai recupere mon pass
+                    {supportCase.status === "PASS_PICKED_UP"
+                      ? "Choisir mon support"
+                      : "Garder le titre en digital"}
                   </Button>
                 </div>
               </div>

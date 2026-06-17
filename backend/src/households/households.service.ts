@@ -203,6 +203,7 @@ export class HouseholdsService {
           | "PASS_PICKED_UP"
           | "DIGITAL_SUPPORT_CONFIRMED"
           | "PHYSICAL_PASS_REACTIVATION_REQUESTED"
+          | "PHYSICAL_PASS_REACTIVATED"
           | "RESOLVED"
           | "CANCELLED_BY_USER";
       }>;
@@ -232,8 +233,13 @@ export class HouseholdsService {
     const hasOpenLostPass = member.supportCases.some(
       (supportCase) =>
         supportCase.type === "LOST_PASS" &&
-        supportCase.status !== "RESOLVED" &&
-        supportCase.status !== "CANCELLED_BY_USER",
+        ![
+          "RESOLVED",
+          "CANCELLED_BY_USER",
+          "DIGITAL_SUPPORT_CONFIRMED",
+          "PHYSICAL_PASS_REACTIVATION_REQUESTED",
+          "PHYSICAL_PASS_REACTIVATED",
+        ].includes(supportCase.status),
     );
     const latestOpenRequest = member.subscriptionRequests.find(
       (request) => !["ACTIVE", "CANCELLED", "BLOCKED"].includes(request.status),

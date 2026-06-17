@@ -160,6 +160,7 @@ enum SupportCaseStatus {
   PASS_PICKED_UP
   DIGITAL_SUPPORT_CONFIRMED
   PHYSICAL_PASS_REACTIVATION_REQUESTED
+  PHYSICAL_PASS_REACTIVATED
   RESOLVED
   CANCELLED_BY_USER
 }
@@ -491,6 +492,10 @@ model SupportCase {
   clientNotifiedAt DateTime?
   pickedUpAt       DateTime?
   finalChoiceAt    DateTime?
+  pickupDeadlineAt DateTime?
+  passDestroyedAt  DateTime?
+  physicalPassReactivatedAt DateTime?
+  digitalSupportRating Int?
   cancelledAt      DateTime?
   resolvedAt       DateTime?
   createdAt        DateTime          @default(now())

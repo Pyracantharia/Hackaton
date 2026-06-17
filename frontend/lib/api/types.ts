@@ -223,6 +223,7 @@ export type SupportCaseStatus =
   | "PASS_PICKED_UP"
   | "DIGITAL_SUPPORT_CONFIRMED"
   | "PHYSICAL_PASS_REACTIVATION_REQUESTED"
+  | "PHYSICAL_PASS_REACTIVATED"
   | "RESOLVED"
   | "CANCELLED_BY_USER";
 
@@ -266,6 +267,10 @@ export type SupportCaseSummary = {
   pickedUpAt: string | null;
   finalChoice: SupportCaseFinalChoice | null;
   finalChoiceAt: string | null;
+  pickupDeadlineAt: string | null;
+  passDestroyedAt: string | null;
+  physicalPassReactivatedAt: string | null;
+  digitalSupportRating: number | null;
   cancellable: boolean;
   createdAt: string;
   updatedAt: string;
@@ -602,6 +607,10 @@ export type AdminSupportCase = {
   clientNotifiedAt: string | null;
   pickedUpAt: string | null;
   finalChoiceAt: string | null;
+  pickupDeadlineAt: string | null;
+  passDestroyedAt: string | null;
+  physicalPassReactivatedAt: string | null;
+  digitalSupportRating: number | null;
   depositedAtDesk: boolean | null;
   createdAt: string;
   updatedAt: string;
@@ -653,6 +662,7 @@ export type AdminSosDashboardResponse = {
     closedCasesCount: number;
     resolutionRate: number;
     averageDelayHours: number;
+    digitalSupportSatisfaction: number | null;
   };
   desks: AdminSosDesk[];
   recentCases: AdminSupportCase[];
@@ -665,6 +675,7 @@ export type AdminFoundPassResponse = {
 
 export type FinalChoicePayload = {
   finalChoice: SupportCaseFinalChoice;
+  digitalSupportRating: number;
 };
 
 export type AdminFamilyDetail = AdminFamilySummary & {

@@ -1,13 +1,14 @@
-import { IsIn, IsInt, Max, Min } from "class-validator";
+import { IsIn, IsInt, IsOptional, Max, Min } from "class-validator";
 
 const FINAL_CHOICES = ["DIGITAL_SUPPORT", "PHYSICAL_PASS_REACTIVATION"] as const;
 
-export class FinalChoiceDto {
+export class FinalChoiceAdminSosCaseDto {
   @IsIn(FINAL_CHOICES)
   finalChoice: (typeof FINAL_CHOICES)[number];
 
   @IsInt()
   @Min(1)
   @Max(10)
-  digitalSupportRating: number;
+  @IsOptional()
+  digitalSupportRating?: number;
 }

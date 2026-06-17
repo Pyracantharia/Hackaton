@@ -144,3 +144,29 @@ export function updateAdminSosNavigoCaseStatus(
     body: JSON.stringify({ status }),
   });
 }
+
+export function markAdminSosNavigoCasePickedUp(accessToken: string, id: string) {
+  return adminFetch<AdminSupportCase>(accessToken, `/api/admin/sos-navigo/cases/${id}/picked-up`, {
+    method: "PATCH",
+  });
+}
+
+export function registerAdminSosNavigoFinalChoice(
+  accessToken: string,
+  id: string,
+  payload: {
+    finalChoice: "DIGITAL_SUPPORT" | "PHYSICAL_PASS_REACTIVATION";
+    digitalSupportRating?: number;
+  },
+) {
+  return adminFetch<AdminSupportCase>(accessToken, `/api/admin/sos-navigo/cases/${id}/final-choice`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function destroyAdminSosNavigoPass(accessToken: string, id: string) {
+  return adminFetch<AdminSupportCase>(accessToken, `/api/admin/sos-navigo/cases/${id}/destroy-pass`, {
+    method: "PATCH",
+  });
+}

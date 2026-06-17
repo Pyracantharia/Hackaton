@@ -61,6 +61,11 @@ export class SupportCasesController {
     @Param("id") id: string,
     @Body() body: FinalChoiceDto,
   ) {
-    return this.supportCasesService.registerFinalChoice(request.user.sub, id, body.finalChoice);
+    return this.supportCasesService.registerFinalChoice(
+      request.user.sub,
+      id,
+      body.finalChoice,
+      body.digitalSupportRating,
+    );
   }
 }
