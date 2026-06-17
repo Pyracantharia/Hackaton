@@ -60,7 +60,6 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-neutral-xlight">
-      <AppNavbar />
 
       <section className="mx-auto w-full max-w-6xl px-5 pb-12 pt-6">
         <div className="mx-auto max-w-3xl text-center">

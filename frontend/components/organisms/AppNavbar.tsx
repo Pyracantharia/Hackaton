@@ -20,6 +20,7 @@ type NavGroup = {
   label: string;
   href: string;
   children: NavChild[] | null;
+  requiresAuth?: boolean;
 };
 
 const navGroups: NavGroup[] = [
@@ -27,6 +28,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Mon espace famille",
     href: "/dashboard/family",
+    requiresAuth: true,
     children: [
       { href: "/dashboard/family", label: "Vue d'ensemble" },
       { href: "/dashboard/family?tab=profiles", label: "Mes profils" },
@@ -51,7 +53,15 @@ const navGroups: NavGroup[] = [
   },
 ];
 
-const mobileLinks = [
+const mobileLinksGuest = [
+  { href: "/", label: "Accueil" },
+  { href: "/dashboard/family?tab=services", label: "Services" },
+  { href: "/found-pass", label: "Signaler un passé trouvé" },
+  { href: "/dashboard/family?tab=help", label: "Aide et contacts" },
+  { href: "/dashboard/family?tab=alerts", label: "Mes alertes" },
+];
+
+const mobileLinksAuth = [
   { href: "/", label: "Accueil" },
   { href: "/dashboard/family", label: "Mon espace famille" },
   { href: "/dashboard/family?tab=profiles", label: "Mes profils" },
@@ -304,7 +314,7 @@ export function AppNavbar({ userName }: AppNavbarProps) {
 
           {/* Navigation desktop avec dropdowns */}
           <nav className="hidden items-stretch lg:flex" aria-label="Navigation principale">
-            {navGroups.map((group) => (
+            {navGroups.filter((g) => !g.requiresAuth || isConnected).map((group) => (
               <div key={group.label} className="relative flex items-stretch">
                 {group.children ? (
                   <button
@@ -526,13 +536,13 @@ export function AppNavbar({ userName }: AppNavbarProps) {
               className="overflow-hidden rounded-xl border border-white/15 bg-white text-idfm-anthracite"
               aria-label="Navigation mobile"
             >
-              {mobileLinks.map((link, index) => (
+              {(isConnected ? mobileLinksAuth : mobileLinksGuest).map((link, index, arr) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={`flex items-center px-5 py-3.5 text-sm font-medium transition ${
-                    index < mobileLinks.length - 1 ? "border-b border-neutral-light" : ""
+                    index < arr.length - 1 ? "border-b border-neutral-light" : ""
                   } ${
                     isActivePath(link.href)
                       ? "bg-idfm-light font-semibold text-idfm-interaction"
