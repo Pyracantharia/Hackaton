@@ -36,7 +36,7 @@ function PreferenceRow({
           <h2 className="mt-3 text-lg font-bold text-idfm-anthracite">{label}</h2>
           <p className="mt-1 text-sm leading-6 text-neutral-medium">{description}</p>
         </div>
-        <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-bold uppercase text-idfm-focus">
+        <span className="shrink-0 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold normal-case text-idfm-focus">
           {checked ? "Oui" : "Non"}
         </span>
       </div>
@@ -89,16 +89,6 @@ export function RegisterConsentsStep({ consents, onChange }: RegisterConsentsSte
         onChange={(checked) => onChange("partnerOffers", checked)}
         tone="orange"
       />
-
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-neutral-light bg-white p-4">
-        <Badge tone="green">Service actif</Badge>
-        <Badge tone={consents.mobilityNews ? "blue" : "orange"}>
-          Conseils {consents.mobilityNews ? "oui" : "non"}
-        </Badge>
-        <Badge tone={consents.partnerOffers ? "blue" : "orange"}>
-          Partenaires {consents.partnerOffers ? "oui" : "non"}
-        </Badge>
-      </div>
     </div>
   );
 }

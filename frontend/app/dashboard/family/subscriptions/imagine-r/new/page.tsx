@@ -173,6 +173,12 @@ function SectionCard({ children, title }: { children: ReactNode; title: string }
   );
 }
 
+function scrollToFormTop() {
+  window.setTimeout(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, 50);
+}
+
 function ChoiceCards({
   onChange,
   value,
@@ -379,6 +385,40 @@ function ImagineRSubscriptionContent() {
       : age !== null && age < 11
         ? "Enfant de moins de 11 ans"
         : "Enfant scolarisé";
+  const hasDraftInProgress = draft?.status === "DRAFT" && step < steps.length - 1;
+
+  useEffect(() => {
+    if (!hasDraftInProgress) return;
+
+    function beforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    function confirmNavigation(event: MouseEvent) {
+      const link = (event.target as HTMLElement | null)?.closest("a[href]");
+
+      if (!link || !(link instanceof HTMLAnchorElement)) return;
+      if (link.target === "_blank" || link.href.startsWith("mailto:") || link.href.startsWith("tel:")) return;
+
+      const targetUrl = new URL(link.href);
+      if (targetUrl.origin !== window.location.origin) return;
+
+      const confirmed = window.confirm("Votre demande est encore en brouillon. Quitter cette page peut interrompre la démarche. Voulez-vous vraiment continuer ?");
+      if (!confirmed) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }
+
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("click", confirmNavigation, true);
+
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("click", confirmNavigation, true);
+    };
+  }, [hasDraftInProgress]);
 
   async function ensureDraft() {
     const accessToken = localStorage.getItem("familyAccessToken");
@@ -511,8 +551,10 @@ function ImagineRSubscriptionContent() {
       }
 
       setStep((current) => Math.min(current + 1, steps.length - 1));
+      scrollToFormTop();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Impossible d'enregistrer cette étape.");
+      scrollToFormTop();
     } finally {
       setIsSaving(false);
     }
@@ -549,10 +591,19 @@ function ImagineRSubscriptionContent() {
           <SubscriptionStepper currentStep={step} steps={steps} />
         </div>
 
-        {message ? <InfoBox>{message}</InfoBox> : null}
+        {message ? (
+          <InfoBox tone="red" className="border-2">
+            <strong className="block text-base">Une action est nécessaire pour continuer.</strong>
+            <span className="mt-1 block">{message}</span>
+          </InfoBox>
+        ) : null}
 
         {step === 0 ? (
           <SectionCard title="Pour quel enfant souhaitez-vous souscrire ?">
+            <InfoBox className="mb-5">
+              <strong>Repère d&apos;âge :</strong> le forfait Junior concerne les enfants de moins de 11 ans. Le forfait Scolaire
+              concerne les élèves de 11 ans et plus, selon leur niveau et leur établissement.
+            </InfoBox>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {youngMembers.map((member) => (
                 <ProfilePickerCard
@@ -598,8 +649,14 @@ function ImagineRSubscriptionContent() {
                   Les forfaits imagine R Scolaire et Junior sont annuels, toutes zones, réservés aux élèves résidant en Île-de-France.
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <InfoBox>Junior : 17,20 € / an + 8 € de frais.</InfoBox>
-                  <InfoBox>Scolaire : 393,30 € / an + 8 € de frais.</InfoBox>
+                  <InfoBox>
+                    <strong>Junior</strong>
+                    <span className="mt-1 block">Moins de 11 ans : 17,20 € / an + 8 € de frais.</span>
+                  </InfoBox>
+                  <InfoBox>
+                    <strong>Scolaire</strong>
+                    <span className="mt-1 block">11 ans et plus, élève scolarisé : 393,30 € / an + 8 € de frais.</span>
+                  </InfoBox>
                 </div>
                 <p>Le dossier est traité sous 10 jours maximum hors week-end et jours fériés.</p>
               </div>

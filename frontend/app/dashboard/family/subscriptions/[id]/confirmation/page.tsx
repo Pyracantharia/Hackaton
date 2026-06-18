@@ -60,7 +60,7 @@ function SubscriptionConfirmationContent() {
     const accessToken = localStorage.getItem("familyAccessToken");
 
     if (!accessToken) {
-      startTransition(() => {
+      void Promise.resolve().then(() => {
         setMessage("Connectez-vous pour afficher le suivi de cette demande.");
         setIsLoading(false);
       });
@@ -99,6 +99,7 @@ function SubscriptionConfirmationContent() {
       setIsCancellingRenewal(false);
     }
   }
+  const isDraft = request?.status === "DRAFT";
 
   return (
     <DashboardLayout
@@ -214,9 +215,21 @@ function SubscriptionConfirmationContent() {
           </section>
 
           <div className="flex flex-col gap-3 sm:flex-row">
+            {isDraft ? (
+              <Link
+                href={`/dashboard/family/subscriptions/imagine-r/new?requestId=${request.id}`}
+                className="inline-flex min-h-12 items-center justify-center rounded-md bg-idfm-interaction px-5 text-sm font-semibold text-white transition hover:bg-idfm-focus focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus"
+              >
+                Finaliser la demande
+              </Link>
+            ) : null}
             <Link
               href="/dashboard/family"
-              className="inline-flex min-h-12 items-center justify-center rounded-md bg-idfm-interaction px-5 text-sm font-semibold text-white transition hover:bg-idfm-focus focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus"
+              className={`inline-flex min-h-12 items-center justify-center rounded-md px-5 text-sm font-semibold transition focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus ${
+                isDraft
+                  ? "border border-idfm-interaction bg-white text-idfm-interaction hover:bg-idfm-light"
+                  : "bg-idfm-interaction text-white hover:bg-idfm-focus"
+              }`}
             >
               Retour a mon foyer
             </Link>
