@@ -24,6 +24,7 @@ const manager: DashboardMember = {
   isLegalRepresentative: true,
   isDemoProfile: false,
   hasActiveTitle: false,
+  titleActionStatus: "NO_TITLE",
   pendingRequest: null,
 };
 
@@ -47,6 +48,7 @@ const youngMember: DashboardMember = {
   isLegalRepresentative: false,
   isDemoProfile: false,
   hasActiveTitle: false,
+  titleActionStatus: "NO_TITLE",
   pendingRequest: null,
 };
 

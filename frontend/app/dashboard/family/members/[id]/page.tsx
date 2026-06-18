@@ -16,6 +16,7 @@ import {
   switchNavigoPassSupport,
 } from "@/lib/api/households";
 import type { LostPassPayload, LostPassResponse, MemberDetailResponse, NavigoPass, NavigoPassSupportType } from "@/lib/api/types";
+import { getMemberTitleAction } from "@/lib/member-title-actions";
 import { getProfileVisual } from "@/lib/member-visuals";
 
 export default function MemberDetailPage() {
@@ -125,6 +126,29 @@ export default function MemberDetailPage() {
     );
   }
 
+  const memberTitleAction = getMemberTitleAction(detail.member);
+  const shouldShowLostPassAction = memberTitleAction.status === "ACTIVE_TITLE" || Boolean(detail.navigoPass);
+  const secondaryTitleAction =
+    memberTitleAction.secondaryHref && memberTitleAction.secondaryLabel
+      ? {
+          href: memberTitleAction.secondaryHref,
+          label: memberTitleAction.secondaryLabel,
+        }
+      : null;
+  const filteredDetailActions = detail.actions.filter((action) => {
+    const label = action.label.toLowerCase();
+
+    if (shouldShowLostPassAction && action.action === "lost-pass") {
+      return false;
+    }
+
+    if (memberTitleAction.blocksNewSubscription && (label.includes("renouveler") || label.includes("souscrire") || label.includes("offre"))) {
+      return false;
+    }
+
+    return true;
+  });
+
   return (
     <DashboardLayout
       activeTab="profiles"
@@ -141,7 +165,7 @@ export default function MemberDetailPage() {
       title={`${detail.member.firstName} ${detail.member.lastName}`}
       userName={detail.manager.firstName ?? "Mon espace"}
     >
-      <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
         <div className="grid gap-6">
           {flash ? <InfoBox tone={flash.tone}>{flash.message}</InfoBox> : null}
 
@@ -184,11 +208,30 @@ export default function MemberDetailPage() {
           </section>
         </div>
 
-        <div className="grid gap-6">
-          <section className="rounded-2xl border border-neutral-light bg-white p-5 shadow-sm">
+        <div className="grid gap-6 self-start lg:content-start">
+          <section className="h-fit rounded-2xl border border-neutral-light bg-white p-5 shadow-sm">
             <h2 className="text-xl font-bold text-idfm-anthracite">Actions utiles</h2>
             <div className="mt-5 grid gap-3">
-              {detail.actions.map((action) => (
+              <Link href={memberTitleAction.primaryHref} className="contents">
+                <Button type="button" variant={memberTitleAction.canStartSubscription ? "primary" : "secondary"}>
+                  {memberTitleAction.primaryLabel}
+                </Button>
+              </Link>
+              {secondaryTitleAction ? (
+                <Link href={secondaryTitleAction.href} className="contents">
+                  <Button type="button" variant="secondary">{secondaryTitleAction.label}</Button>
+                </Link>
+              ) : null}
+              {shouldShowLostPassAction ? (
+                <Button type="button" variant="secondary" onClick={() => setIsLostPassOpen(true)}>
+                  SOS Navigo
+                </Button>
+              ) : null}
+              <InfoBox tone={memberTitleAction.blocksNewSubscription ? "orange" : "blue"}>
+                <span className="font-semibold text-idfm-anthracite">{memberTitleAction.statusLabel}</span>
+                <span className="mt-1 block">{memberTitleAction.message}</span>
+              </InfoBox>
+              {filteredDetailActions.map((action) => (
                 action.href ? (
                   <Link key={`${action.label}-${action.href}`} href={action.href} className="contents">
                     <Button type="button" variant={action.variant}>{action.label}</Button>
@@ -211,7 +254,7 @@ export default function MemberDetailPage() {
             <InfoBox>{detail.accessibilityNote}</InfoBox>
           ) : null}
 
-          <section id="eligibilite" className="rounded-2xl border border-neutral-light bg-white p-5 shadow-sm">
+          <section id="eligibilite" className="h-fit rounded-2xl border border-neutral-light bg-white p-5 shadow-sm">
             <h2 className="text-xl font-bold text-idfm-anthracite">Alertes du profil</h2>
             <div className="mt-4 grid gap-3">
               {detail.alerts.map((alert) => (

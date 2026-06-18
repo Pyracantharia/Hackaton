@@ -8,7 +8,9 @@ const ADMIN_SUBSCRIPTION_REQUEST_STATUSES = [
   "PAYMENT_CANCELLED",
   "CONFIRMED",
   "BLOCKED",
+  "CANCELLED",
   "REJECTED",
+  "EXPIRED",
 ] as const;
 
 export class UpdateAdminSubscriptionRequestDto {

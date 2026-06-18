@@ -32,6 +32,7 @@ const navGroupsAuth: NavGroup[] = [
       { href: "/dashboard/family", label: "Vue d'ensemble" },
       { href: "/dashboard/family?tab=profiles", label: "Mes profils" },
       { href: "/dashboard/family?tab=titles", label: "Mes titres" },
+      { href: "/dashboard/family?tab=demarches", label: "Mes démarches" },
     ],
   },
   {
@@ -74,6 +75,7 @@ const mobileLinksAuth = [
   { href: "/dashboard/family", label: "Mon espace famille" },
   { href: "/dashboard/family?tab=profiles", label: "Mes profils" },
   { href: "/dashboard/family?tab=titles", label: "Mes titres" },
+  { href: "/dashboard/family?tab=demarches", label: "Mes démarches" },
   { href: "/dashboard/family?tab=services", label: "Services" },
   { href: "/found-pass", label: "Signaler un passé trouvé" },
   { href: "/dashboard/family?tab=help", label: "Aide et contacts" },

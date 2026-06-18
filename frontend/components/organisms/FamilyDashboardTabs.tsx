@@ -11,6 +11,7 @@ const tabs = [
   { id: "profiles", label: "Profils", icon: "/assets/iconparcours/Femme.svg" },
   { id: "titles", label: "Titres", icon: "/assets/iconparcours/svgexport-3.svg" },
   { id: "services", label: "Services", icon: "/assets/iconparcours/svgexport-5.svg" },
+  { id: "demarches", label: "Démarches", icon: "/assets/iconparcours/svgexport-10.svg" },
   { id: "alerts", label: "Alertes", icon: "/assets/iconparcours/svgexport-7.svg" },
   { id: "help", label: "Aide", icon: "/assets/iconparcours/svgexport-8.svg" },
 ];

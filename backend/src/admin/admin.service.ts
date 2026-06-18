@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { PrismaService } from "src/prisma/prisma.service";
@@ -14,7 +14,6 @@ type FamilyRecord = any;
 type SubscriptionRequestRecord = any;
 type SupportCaseRecord = any;
 
-const OPEN_SUBSCRIPTION_REQUEST_STATUSES = ["WAITING_DOCUMENTS", "UNDER_REVIEW", "PAYMENT_PENDING", "BLOCKED"] as const;
 const BLOCKING_DOCUMENT_STATUSES = ["MISSING", "READY", "UPLOADED", "UNDER_REVIEW", "REJECTED"] as const;
 
 const SOS_DESKS = [
@@ -26,6 +25,14 @@ const SOS_DESKS = [
 ];
 
 const PICKUP_DELAY_DAYS = 14;
+const OPEN_SUBSCRIPTION_REQUEST_STATUSES = [
+  "DRAFT",
+  "WAITING_DOCUMENTS",
+  "UNDER_REVIEW",
+  "PAYMENT_PENDING",
+  "CONFIRMED",
+  "BLOCKED",
+] as const;
 
 @Injectable()
 export class AdminService {
@@ -1020,6 +1027,36 @@ export class AdminService {
   }
 
   async updateSubscriptionRequest(id: string, data: UpdateAdminSubscriptionRequestDto) {
+    const existing = await this.prismaService.subscriptionRequest.findUnique({
+      where: { id },
+      include: {
+        offer: true,
+        member: true,
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException("Demande de souscription introuvable.");
+    }
+
+    if (data.status === "CONFIRMED" && existing.status !== "CONFIRMED") {
+      const activeSubscription = await this.prismaService.subscription.findFirst({
+        where: {
+          householdMemberId: existing.memberId,
+          status: "ACTIVE",
+        },
+      });
+
+      if (activeSubscription) {
+        throw new ConflictException({
+          code: "ACTIVE_TITLE_EXISTS",
+          message: "Ce profil possède déjà un titre actif.",
+          existingTitleId: activeSubscription.id,
+          existingTitleStatus: activeSubscription.status,
+        });
+      }
+    }
+
     const updated = await this.prismaService.subscriptionRequest.update({
       where: { id },
       data: {

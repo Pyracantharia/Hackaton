@@ -21,6 +21,7 @@ import type {
 } from "@/lib/api/types";
 import { familyDashboardMock } from "@/lib/demo/familyDashboardMock";
 import { titleOffersMock } from "@/lib/demo/titleOffersMock";
+import { getMemberTitleAction } from "@/lib/member-title-actions";
 
 type LifeSituation = NonNullable<RecommendationAnswers["lifeSituation"]>;
 
@@ -203,10 +204,17 @@ function RecommendationPageContent() {
     () => data.members.find((member) => member.id === selectedMemberId) ?? data.members[0],
     [data.members, selectedMemberId],
   );
+  const selectedMemberAction = selectedMember ? getMemberTitleAction(selectedMember) : null;
 
   async function handleRecommend() {
     if (!selectedMember) {
       setMessage("Selectionnez un profil pour continuer.");
+      return;
+    }
+
+    if (selectedMemberAction && !selectedMemberAction.canStartSubscription) {
+      setRecommendation(null);
+      setMessage(selectedMemberAction.message);
       return;
     }
 
@@ -274,6 +282,14 @@ function RecommendationPageContent() {
     >
       <div className="grid gap-8">
         {message ? <InfoBox>{message}</InfoBox> : null}
+        {selectedMemberAction && !selectedMemberAction.canStartSubscription ? (
+          <InfoBox>
+            {selectedMemberAction.message}{" "}
+            <Link href={selectedMemberAction.primaryHref} className="font-semibold text-idfm-interaction underline-offset-4 hover:underline">
+              {selectedMemberAction.primaryLabel}
+            </Link>
+          </InfoBox>
+        ) : null}
 
         <section>
           <h2 className="text-2xl font-bold text-idfm-anthracite">1. Profil concerne</h2>
@@ -389,7 +405,7 @@ function RecommendationPageContent() {
         </section>
 
         {recommendation && selectedMember ? (
-          <RecommendationCard memberId={selectedMember.id} recommendation={recommendation} />
+          <RecommendationCard member={selectedMember} memberId={selectedMember.id} recommendation={recommendation} />
         ) : null}
       </div>
     </DashboardLayout>

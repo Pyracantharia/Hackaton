@@ -183,6 +183,7 @@ function AddressBlock({ address }: { address: AdminSubscriptionRequestDetail["ho
 
 function RequestModal({
   detail,
+  feedback,
   isBusy,
   onClose,
   onDocumentStatus,
@@ -190,6 +191,7 @@ function RequestModal({
   onReject,
 }: {
   detail: AdminSubscriptionRequestDetail | null;
+  feedback: { tone: "green" | "red" | "orange" | "blue"; text: string } | null;
   isBusy: boolean;
   onClose: () => void;
   onDocumentStatus: (documentId: string, status: "VALIDATED" | "REJECTED" | "UNDER_REVIEW", reason?: string) => void;
@@ -259,6 +261,8 @@ function RequestModal({
         </header>
 
         <div className="grid gap-6 p-5">
+          {feedback ? <InfoBox tone={feedback.tone}>{feedback.text}</InfoBox> : null}
+
           {detail.rejectionReason ? (
             <InfoBox tone={detail.status === "REJECTED" ? "red" : "orange"}>Motif enregistré : {detail.rejectionReason}</InfoBox>
           ) : null}
@@ -563,6 +567,27 @@ export default function AdminTitlesPage() {
     }
   }
 
+  async function approveSelectedRequest() {
+    if (!selectedRequest) return;
+
+    const accessToken = getAccessToken();
+    if (!accessToken) return;
+
+    const requestId = selectedRequest.id;
+    setIsBusy(true);
+
+    try {
+      await approveAdminSubscriptionRequest(accessToken, requestId);
+      setSelectedRequest(null);
+      setMessage({ tone: "green", text: "Demande validée et titre actif créé." });
+      await refreshRequests(accessToken, filter, query);
+    } catch (error) {
+      setMessage({ tone: "red", text: error instanceof Error ? error.message : "Action impossible." });
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
   return (
     <DashboardLayout
       activeTab="admin"
@@ -695,6 +720,7 @@ export default function AdminTitlesPage() {
 
       <RequestModal
         detail={selectedRequest}
+        feedback={message}
         isBusy={isBusy}
         onClose={() => setSelectedRequest(null)}
         onDocumentStatus={(documentId, status, rejectionReason) => {
@@ -705,11 +731,7 @@ export default function AdminTitlesPage() {
           );
         }}
         onApprove={() => {
-          if (!selectedRequest) return;
-          void mutateSelectedRequest(
-            () => approveAdminSubscriptionRequest(getAccessToken() ?? "", selectedRequest.id),
-            "Demande validée et titre actif créé.",
-          );
+          void approveSelectedRequest();
         }}
         onReject={(reason) => {
           if (!selectedRequest) return;

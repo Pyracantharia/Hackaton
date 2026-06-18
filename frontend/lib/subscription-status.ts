@@ -12,6 +12,7 @@ const labels: Record<SubscriptionRequestStatus, string> = {
   BLOCKED: "Correction nécessaire",
   REJECTED: "Refusée",
   CANCELLED: "Annulée",
+  EXPIRED: "Expirée",
 };
 
 export function getSubscriptionRequestStatusLabel(status: SubscriptionRequestStatus) {

@@ -11,6 +11,7 @@ import { getTitleOffers } from "@/lib/api/titles";
 import type { HouseholdDashboardResponse, ProductOffer } from "@/lib/api/types";
 import { familyDashboardMock } from "@/lib/demo/familyDashboardMock";
 import { titleOffersMock } from "@/lib/demo/titleOffersMock";
+import { getMemberTitleAction } from "@/lib/member-title-actions";
 import { getSubscriptionRequestStatusLabel } from "@/lib/subscription-status";
 
 type TitlesPageState = {
@@ -20,24 +21,14 @@ type TitlesPageState = {
 };
 
 function buildSummaryItems(data: HouseholdDashboardResponse) {
+  const activeTitlesCount = data.members.filter((member) => getMemberTitleAction(member).status === "ACTIVE_TITLE").length;
+
   return [
     `Bonjour ${data.manager.firstName}`,
     `${data.summary.membersCount} profils suivis`,
     `${data.summary.offersToCheckCount} offre a etudier`,
-    "0 titre actif",
+    `${activeTitlesCount} titre actif`,
   ];
-}
-
-function getMemberTitleStatus(member: HouseholdDashboardResponse["members"][number]) {
-  if (member.pendingRequest || member.status === "PENDING_DOCUMENT") {
-    return "Demande en cours";
-  }
-
-  if (member.currentProduct) {
-    return "Titre rattache";
-  }
-
-  return member.profileType === "MANAGER" ? "Aucun titre rattache" : "Offre a choisir";
 }
 
 function formatMonthYear(value: string | null) {
@@ -193,16 +184,7 @@ function FamilyTitlesContent() {
 
           <div className="mt-5 grid gap-4 lg:grid-cols-3">
             {data.members.map((member) => {
-              const actionHref = member.pendingRequest
-                ? member.pendingRequest.status === "DRAFT"
-                  ? `/dashboard/family/subscriptions/imagine-r/new?requestId=${member.pendingRequest.id}`
-                  : `/dashboard/family/subscriptions/${member.pendingRequest.id}/confirmation`
-                : `/dashboard/family/titles/recommendation?memberId=${member.id}`;
-              const actionLabel = member.pendingRequest
-                ? member.pendingRequest.status === "DRAFT"
-                  ? "Finaliser la demande"
-                  : "Voir l'état de ma demande"
-                : "Trouver une offre";
+              const action = getMemberTitleAction(member);
 
               return (
                 <article key={member.id} className="flex h-full flex-col rounded-2xl border border-neutral-light bg-white p-5 shadow-sm">
@@ -213,9 +195,7 @@ function FamilyTitlesContent() {
                       </h3>
                       <p className="mt-1 text-sm text-neutral-medium">{member.relationLabel}</p>
                     </div>
-                    <Badge tone={member.pendingRequest || member.status === "PENDING_DOCUMENT" ? "orange" : "blue"}>
-                      {getMemberTitleStatus(member)}
-                    </Badge>
+                    <Badge tone={action.statusTone}>{action.statusLabel}</Badge>
                   </div>
                   <p className="mt-4 flex-1 text-sm leading-6 text-neutral-medium">
                     {member.pendingRequest
@@ -229,12 +209,22 @@ function FamilyTitlesContent() {
                       {member.pendingRequest.renewal.label}
                     </p>
                   ) : null}
-                  <Link
-                    href={actionHref}
-                    className="mt-5 inline-flex min-h-12 items-center justify-center rounded-md bg-idfm-interaction px-5 text-sm font-semibold text-white transition hover:bg-idfm-focus focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus"
-                  >
-                    {actionLabel}
-                  </Link>
+                  <div className="mt-5 grid gap-3">
+                    <Link
+                      href={action.primaryHref}
+                      className="inline-flex min-h-12 items-center justify-center rounded-md bg-idfm-interaction px-5 text-sm font-semibold text-white transition hover:bg-idfm-focus focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus"
+                    >
+                      {action.primaryLabel}
+                    </Link>
+                    {action.secondaryLabel && action.secondaryHref ? (
+                      <Link
+                        href={action.secondaryHref}
+                        className="inline-flex min-h-12 items-center justify-center rounded-md border border-idfm-interaction px-5 text-sm font-semibold text-idfm-interaction transition hover:bg-idfm-light focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus"
+                      >
+                        {action.secondaryLabel}
+                      </Link>
+                    ) : null}
+                  </div>
                 </article>
               );
             })}

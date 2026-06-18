@@ -18,6 +18,7 @@ import { getTitleOffers } from "@/lib/api/titles";
 import type { DashboardMember, HouseholdDashboardResponse, ProductOffer } from "@/lib/api/types";
 import { familyDashboardMock } from "@/lib/demo/familyDashboardMock";
 import { titleOffersMock } from "@/lib/demo/titleOffersMock";
+import { getMemberTitleAction } from "@/lib/member-title-actions";
 
 const steps = ["Porteur", "Offre", "Dossier", "Confirmation"];
 
@@ -94,18 +95,30 @@ function SubscriptionNewContent() {
     () => offers.find((offer) => offer.id === selectedOfferId) ?? preferredOfferForMember(selectedMember, offers),
     [offers, selectedMember, selectedOfferId],
   );
+  const selectedMemberAction = selectedMember ? getMemberTitleAction(selectedMember) : null;
   const payerMember = data.members.find((member) => member.id === payerMemberId) ?? data.members.find((member) => member.id === data.manager.id);
   const isMonthlyOffer = selectedOffer?.productType === "NAVIGO_LIBERTE";
 
   useEffect(() => {
-    if (isLoading || !selectedMember || !selectedOffer || !isImagineROffer(selectedOffer)) {
+    if (
+      isLoading ||
+      !selectedMember ||
+      !selectedOffer ||
+      !isImagineROffer(selectedOffer) ||
+      (selectedMemberAction && !selectedMemberAction.canStartSubscription)
+    ) {
       return;
     }
 
     router.replace(`/dashboard/family/subscriptions/imagine-r/new?memberId=${selectedMember.id}&offerId=${selectedOffer.id}`);
-  }, [isLoading, router, selectedMember, selectedOffer]);
+  }, [isLoading, router, selectedMember, selectedMemberAction, selectedOffer]);
 
   function handleNext() {
+    if (step === 0 && selectedMemberAction && !selectedMemberAction.canStartSubscription) {
+      setMessage(selectedMemberAction.message);
+      return;
+    }
+
     setStep((current) => Math.min(current + 1, steps.length - 1));
   }
 
@@ -119,6 +132,11 @@ function SubscriptionNewContent() {
 
     if (!selectedMember || !selectedOffer) {
       setMessage("Choisissez un porteur et une offre.");
+      return;
+    }
+
+    if (selectedMemberAction && !selectedMemberAction.canStartSubscription) {
+      setMessage(selectedMemberAction.message);
       return;
     }
 
@@ -177,6 +195,14 @@ function SubscriptionNewContent() {
     >
       <div className="grid gap-8">
         {message ? <InfoBox>{message}</InfoBox> : null}
+        {selectedMemberAction && !selectedMemberAction.canStartSubscription ? (
+          <InfoBox>
+            {selectedMemberAction.message}{" "}
+            <Link href={selectedMemberAction.primaryHref} className="font-semibold text-idfm-interaction underline-offset-4 hover:underline">
+              {selectedMemberAction.primaryLabel}
+            </Link>
+          </InfoBox>
+        ) : null}
 
         <div className="rounded-2xl border border-neutral-light bg-white p-5 shadow-sm">
           <SubscriptionStepper currentStep={step} steps={steps} />

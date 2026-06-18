@@ -3,15 +3,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/atoms/Badge";
 import { InfoBox } from "@/components/molecules/InfoBox";
 import { OfferCard } from "@/components/molecules/OfferCard";
 import { RequiredDocumentList } from "@/components/molecules/RequiredDocumentList";
 import { DashboardLayout } from "@/components/templates/DashboardLayout";
+import { getMyHouseholdDashboard } from "@/lib/api/households";
 import { getTitleOfferDetail } from "@/lib/api/titles";
-import type { ProductOffer, ProductOfferDetail } from "@/lib/api/types";
+import type { DashboardMember, ProductOffer, ProductOfferDetail } from "@/lib/api/types";
+import { familyDashboardMock } from "@/lib/demo/familyDashboardMock";
 import { titleOffersMock } from "@/lib/demo/titleOffersMock";
+import { getMemberTitleAction } from "@/lib/member-title-actions";
 import { getOfferVisual } from "@/lib/offer-visuals";
 
 function withMandatoryIdentityDocument(offer: ProductOfferDetail): ProductOfferDetail {
@@ -64,24 +67,42 @@ function OfferBenefits({ benefits }: { benefits: ProductOffer["benefits"] }) {
 
 function OfferDetailContent() {
   const params = useParams<{ slug: string }>();
+  const searchParams = useSearchParams();
   const slug = params.slug;
+  const memberId = searchParams.get("memberId");
   const [offer, setOffer] = useState<ProductOfferDetail | null>(null);
+  const [selectedMember, setSelectedMember] = useState<DashboardMember | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadOffer() {
+    async function loadOfferAndMember() {
       try {
-        setOffer(await getTitleOfferDetail(slug));
+        const [offerResponse, dashboardResponse] = await Promise.all([
+          getTitleOfferDetail(slug),
+          memberId
+            ? getMyHouseholdDashboard(localStorage.getItem("familyAccessToken") ?? "").catch(() => familyDashboardMock)
+            : Promise.resolve(null),
+        ]);
+        setOffer(offerResponse);
+        setSelectedMember(dashboardResponse?.members.find((member) => member.id === memberId) ?? null);
       } catch (error) {
         setOffer(buildMockDetail(slug));
         setLoadError(error instanceof Error ? error.message : "Fiche offre affichee en mode demo.");
       }
     }
 
-    void loadOffer();
-  }, [slug]);
+    void loadOfferAndMember();
+  }, [memberId, slug]);
 
   const currentOffer = useMemo(() => withMandatoryIdentityDocument(offer ?? buildMockDetail(slug)), [offer, slug]);
+  const selectedMemberAction = selectedMember ? getMemberTitleAction(selectedMember) : null;
+  const canStartForSelectedMember = !selectedMemberAction || selectedMemberAction.canStartSubscription || selectedMemberAction.status === "REQUEST_DRAFT";
+  const startHref =
+    selectedMember && currentOffer.productType.startsWith("IMAGINE_R")
+      ? `/dashboard/family/subscriptions/imagine-r/new?memberId=${selectedMember.id}&offerId=${currentOffer.id}`
+      : selectedMember
+        ? `/dashboard/family/subscriptions/new?memberId=${selectedMember.id}&offerId=${currentOffer.id}`
+        : "/dashboard/family/titles/recommendation";
 
   return (
     <DashboardLayout
@@ -119,12 +140,22 @@ function OfferDetailContent() {
             <div className="mt-6">
               <OfferBenefits benefits={currentOffer.benefits} />
             </div>
-            <Link
-              href="/dashboard/family/titles/recommendation"
-              className="mt-8 inline-flex min-h-12 w-full items-center justify-center rounded-md bg-idfm-interaction px-5 text-sm font-semibold text-white transition hover:bg-idfm-focus focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus sm:w-auto"
-            >
-              Trouver un profil compatible
-            </Link>
+            {selectedMemberAction && !canStartForSelectedMember ? (
+              <InfoBox tone="orange" className="mt-8">
+                <span className="font-semibold text-idfm-anthracite">{selectedMemberAction.statusLabel}</span>
+                <span className="mt-1 block">{selectedMemberAction.message}</span>
+                <Link href={selectedMemberAction.primaryHref} className="mt-3 inline-flex font-semibold text-idfm-interaction">
+                  {selectedMemberAction.primaryLabel}
+                </Link>
+              </InfoBox>
+            ) : (
+              <Link
+                href={startHref}
+                className="mt-8 inline-flex min-h-12 w-full items-center justify-center rounded-md bg-idfm-interaction px-5 text-sm font-semibold text-white transition hover:bg-idfm-focus focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus sm:w-auto"
+              >
+                {selectedMemberAction?.status === "REQUEST_DRAFT" ? "Reprendre ma demande" : selectedMember ? "Souscrire pour ce profil" : "Trouver un profil compatible"}
+              </Link>
+            )}
           </div>
         </section>
 
@@ -141,12 +172,21 @@ function OfferDetailContent() {
               Pour le MVP, la souscription prepare une demande suivie dans votre espace famille. Le paiement et l'envoi reel
               des justificatifs restent simules.
             </p>
-            <Link
-              href="/dashboard/family/subscriptions/new"
-              className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-md bg-idfm-interaction px-5 text-sm font-semibold text-white transition hover:bg-idfm-focus focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus"
-            >
-              Demarrer une demande
-            </Link>
+            {selectedMemberAction && !canStartForSelectedMember ? (
+              <Link
+                href={selectedMemberAction.primaryHref}
+                className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-md border border-idfm-interaction bg-white px-5 text-sm font-semibold text-idfm-interaction transition hover:bg-idfm-light focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus"
+              >
+                {selectedMemberAction.primaryLabel}
+              </Link>
+            ) : (
+              <Link
+                href={startHref}
+                className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-md bg-idfm-interaction px-5 text-sm font-semibold text-white transition hover:bg-idfm-focus focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus"
+              >
+                {selectedMemberAction?.status === "REQUEST_DRAFT" ? "Reprendre la demande" : "Demarrer une demande"}
+              </Link>
+            )}
           </div>
         </section>
 

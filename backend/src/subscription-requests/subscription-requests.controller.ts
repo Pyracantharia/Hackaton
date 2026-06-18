@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { AuthenticatedRequest } from "src/auth/guards/jwt-auth.guard";
 import { JwtAuthGuard } from "src/auth/guards/jwt-auth.guard";
@@ -50,6 +50,19 @@ export class SubscriptionRequestsController {
       id,
       documentType,
       file,
+    );
+  }
+
+  @Delete(":id/imagine-r/documents/:documentType/file")
+  async deleteImagineRDocumentFile(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Param("documentType") documentType: string,
+  ) {
+    return this.subscriptionRequestsService.deleteImagineRDocumentFileForUser(
+      request.user.sub,
+      id,
+      documentType,
     );
   }
 

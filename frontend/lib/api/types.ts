@@ -130,8 +130,17 @@ export type SubscriptionRequestStatus =
   | "CONFIRMED"
   | "ACTIVE"
   | "BLOCKED"
+  | "CANCELLED"
   | "REJECTED"
-  | "CANCELLED";
+  | "EXPIRED";
+
+export type MemberTitleActionStatus =
+  | "NO_TITLE"
+  | "REQUEST_DRAFT"
+  | "REQUEST_IN_PROGRESS"
+  | "ACTIVE_TITLE"
+  | "TITLE_TO_RENEW"
+  | "TITLE_EXPIRED";
 
 export type SubscriptionRenewalType = "ANNUAL" | "MONTHLY";
 export type SubscriptionRenewalStatus = "ACTIVE" | "DISABLED" | "CANCELLED" | "EXPIRED";
@@ -155,6 +164,8 @@ export type DashboardPendingRequest = {
   status: SubscriptionRequestStatus;
   offerName: string;
   offerSlug: string;
+  offerProductType: string;
+  flowType: "GENERIC" | "IMAGINE_R" | null;
   updatedAt: string;
   renewal: SubscriptionRenewal;
 };
@@ -179,6 +190,7 @@ export type DashboardMember = {
   isLegalRepresentative: boolean;
   isDemoProfile: boolean;
   hasActiveTitle: boolean;
+  titleActionStatus: MemberTitleActionStatus;
   pendingRequest: DashboardPendingRequest | null;
 };
 
@@ -218,6 +230,34 @@ export type HouseholdDashboardResponse = {
   members: DashboardMember[];
   notifications: DashboardNotification[];
   recentActivity: RecentActivityItem[];
+};
+
+export type HouseholdProcedureType =
+  | "SUBSCRIPTION"
+  | "RENEWAL"
+  | "SOS_NAVIGO"
+  | "FOUND_PASS"
+  | "SUPPORT_SWITCH"
+  | "DOCUMENT"
+  | "PAYMENT";
+
+export type HouseholdProcedure = {
+  id: string;
+  profileName: string;
+  profileId: string | null;
+  type: HouseholdProcedureType;
+  title: string;
+  relatedTitle: string | null;
+  status: string;
+  statusLabel: string;
+  createdAt: string;
+  updatedAt: string;
+  nextAction: string;
+  detailUrl: string;
+};
+
+export type HouseholdProceduresResponse = {
+  procedures: HouseholdProcedure[];
 };
 
 export type MemberDetailAction = {

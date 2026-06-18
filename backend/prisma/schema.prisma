@@ -102,6 +102,7 @@ enum SubscriptionRequestStatus {
   BLOCKED
   REJECTED
   CANCELLED
+  EXPIRED
 }
 
 enum SubscriptionRequestFlow {

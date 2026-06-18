@@ -10,6 +10,7 @@ import { AddMemberPanel } from "@/components/organisms/AddMemberPanel";
 import { FamilyAlertsSection } from "@/components/organisms/FamilyAlertsSection";
 import { FamilyHelpSection } from "@/components/organisms/FamilyHelpSection";
 import { FamilyMembersSection } from "@/components/organisms/FamilyMembersSection";
+import { FamilyProceduresSection } from "@/components/organisms/FamilyProceduresSection";
 import { FamilyQuickActions } from "@/components/organisms/FamilyQuickActions";
 import { FamilyRecentActivity } from "@/components/organisms/FamilyRecentActivity";
 import { FamilyWelcomeSection } from "@/components/organisms/FamilyWelcomeSection";
@@ -21,12 +22,14 @@ import {
   addHouseholdMember,
   createLostPassSupportCase,
   getMyHouseholdDashboard,
+  getMyHouseholdProcedures,
   getRecoveredSupportAlerts,
   registerSupportCaseFinalChoice,
 } from "@/lib/api/households";
 import type {
   AddHouseholdMemberPayload,
   HouseholdDashboardResponse,
+  HouseholdProcedure,
   LostPassPayload,
   LostPassResponse,
   RegisterMemberType,
@@ -39,7 +42,7 @@ type FlashMessage = {
   tone: "blue" | "green" | "orange" | "red";
 };
 
-type DashboardTabId = "welcome" | "overview" | "profiles" | "titles" | "services" | "alerts" | "help";
+type DashboardTabId = "welcome" | "overview" | "profiles" | "titles" | "services" | "demarches" | "alerts" | "help";
 
 function getActiveTab(value: string | null): DashboardTabId {
   switch (value) {
@@ -47,6 +50,7 @@ function getActiveTab(value: string | null): DashboardTabId {
     case "profiles":
     case "titles":
     case "services":
+    case "demarches":
     case "alerts":
     case "help":
       return value;
@@ -187,6 +191,7 @@ function FamilyDashboardPageContent() {
   const [isSubmittingLostPass, setIsSubmittingLostPass] = useState(false);
   const [sosRefreshSignal, setSosRefreshSignal] = useState(0);
   const [recoveredAlerts, setRecoveredAlerts] = useState<SupportCaseSummary[]>([]);
+  const [procedures, setProcedures] = useState<HouseholdProcedure[]>([]);
   const [selectedRecoveredCase, setSelectedRecoveredCase] = useState<SupportCaseSummary | null>(null);
   const [isSubmittingRecoveredChoice, setIsSubmittingRecoveredChoice] = useState(false);
   const activeTab = getActiveTab(searchParams.get("tab"));
@@ -230,11 +235,13 @@ function FamilyDashboardPageContent() {
     void Promise.all([
       getMyHouseholdDashboard(accessToken),
       getRecoveredSupportAlerts(accessToken),
+      getMyHouseholdProcedures(accessToken),
     ])
-      .then(([dashboardResponse, alertsResponse]) => {
+      .then(([dashboardResponse, alertsResponse, proceduresResponse]) => {
         startTransition(() => {
           setData(dashboardResponse);
           setRecoveredAlerts(alertsResponse);
+          setProcedures(proceduresResponse.procedures);
         });
       })
       .catch((error: Error) => {
@@ -436,6 +443,8 @@ function FamilyDashboardPageContent() {
             <FamilyQuickActions members={data.members} />
           </div>
         );
+      case "demarches":
+        return <FamilyProceduresSection members={data.members} procedures={procedures} />;
       case "alerts":
         return <FamilyAlertsSection notifications={data.notifications} />;
       case "help":

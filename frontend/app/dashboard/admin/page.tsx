@@ -63,6 +63,7 @@ const requestStatusLabels: Record<SubscriptionRequestStatus, string> = {
   BLOCKED: "Bloquee",
   REJECTED: "Refusee",
   CANCELLED: "Annulee",
+  EXPIRED: "Expiree",
 };
 
 function getStatusLabel(status: string) {

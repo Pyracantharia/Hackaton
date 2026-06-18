@@ -18,10 +18,12 @@ import { DashboardLayout } from "@/components/templates/DashboardLayout";
 import { getMyHouseholdDashboard } from "@/lib/api/households";
 import {
   createImagineRSubscriptionDraft,
+  deleteImagineRSubscriptionDocumentFile,
   getSubscriptionRequest,
   updateImagineRSubscriptionDraft,
   uploadImagineRSubscriptionDocumentFile,
 } from "@/lib/api/subscriptions";
+import type { ImagineRDocumentType } from "@/lib/api/subscriptions";
 import { getTitleOffers } from "@/lib/api/titles";
 import { confirmStripePaymentIntent, createStripePaymentIntent } from "@/lib/api/payments";
 import type {
@@ -36,6 +38,7 @@ import type {
 } from "@/lib/api/types";
 import { familyDashboardMock } from "@/lib/demo/familyDashboardMock";
 import { titleOffersMock } from "@/lib/demo/titleOffersMock";
+import { getMemberTitleAction } from "@/lib/member-title-actions";
 import { getSubscriptionRequestStatusLabel } from "@/lib/subscription-status";
 
 const steps = [
@@ -298,40 +301,51 @@ function AddressForm({
 }
 
 function UploadBox({
+  disabled,
   file,
   label,
   onFile,
+  onRemove,
 }: {
+  disabled?: boolean;
   file: FormState["photoFile"];
   label: string;
   onFile: (file: FormState["photoFile"]) => void;
+  onRemove?: () => void;
 }) {
   return (
-    <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-idfm-interaction bg-white p-5 text-center transition hover:bg-idfm-light focus-within:ring-3 focus-within:ring-idfm-medium">
-      <span className="text-lg font-bold text-idfm-interaction">{file ? file.name : label}</span>
-      <span className="mt-2 text-sm text-neutral-medium">{file ? "Document ajouté pour la démo" : "Glissez-déposez ou chargez un fichier"}</span>
-      <input
-        type="file"
-        className="sr-only"
-        onChange={(event) => {
-          const selectedFile = event.target.files?.[0];
-          if (!selectedFile) {
-            onFile(null);
-            return;
-          }
+    <div className="grid gap-3">
+      <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-idfm-interaction bg-white p-5 text-center transition hover:bg-idfm-light focus-within:ring-3 focus-within:ring-idfm-medium">
+        <span className="text-lg font-bold text-idfm-interaction">{file ? file.name : label}</span>
+        <span className="mt-2 text-sm text-neutral-medium">{file ? "Document ajouté" : "Glissez-déposez ou chargez un fichier"}</span>
+        <input
+          type="file"
+          className="sr-only"
+          disabled={disabled}
+          onChange={(event) => {
+            const selectedFile = event.target.files?.[0];
+            event.target.value = "";
 
-          void readPreviewDataUrl(selectedFile).then((previewDataUrl) => {
-            onFile({
-              name: selectedFile.name,
-              type: selectedFile.type,
-              size: selectedFile.size,
-              previewDataUrl,
-              sourceFile: selectedFile,
+            if (!selectedFile) return;
+
+            void readPreviewDataUrl(selectedFile).then((previewDataUrl) => {
+              onFile({
+                name: selectedFile.name,
+                type: selectedFile.type,
+                size: selectedFile.size,
+                previewDataUrl,
+                sourceFile: selectedFile,
+              });
             });
-          });
-        }}
-      />
-    </label>
+          }}
+        />
+      </label>
+      {file ? (
+        <Button type="button" variant="secondary" disabled={disabled} onClick={onRemove}>
+          Supprimer le document
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
@@ -491,6 +505,7 @@ function EmbeddedStripePayment({
 function ImagineRSubscriptionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const profileStepRequired = !searchParams.get("memberId") && !searchParams.get("requestId");
   const [dashboard, setDashboard] = useState<HouseholdDashboardResponse | null>(null);
   const [offers, setOffers] = useState<ProductOffer[]>(titleOffersMock);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(searchParams.get("memberId"));
@@ -596,13 +611,15 @@ function ImagineRSubscriptionContent() {
         if (savedProgress) {
           setSelectedMemberId(savedProgress.selectedMemberId ?? memberId);
           setSelectedOfferId(savedProgress.selectedOfferId ?? offer?.id ?? null);
-          setStep(Math.min(Math.max(savedProgress.step, 0), steps.length - 2));
+          const restoredStep = Math.min(Math.max(savedProgress.step, 0), steps.length - 2);
+          setStep(profileStepRequired ? restoredStep : Math.max(restoredStep, 1));
           setForm((current) => ({
             ...current,
             ...savedProgress.form,
             schoolLevel: savedProgress.form.schoolLevel ?? member?.schoolLevel ?? current.schoolLevel,
           }));
         } else {
+          setStep(profileStepRequired ? 0 : 1);
           setForm((current) => ({
             ...current,
             schoolLevel: member?.schoolLevel ?? current.schoolLevel,
@@ -610,6 +627,7 @@ function ImagineRSubscriptionContent() {
         }
       } catch (error) {
         setDashboard(familyDashboardMock);
+        setStep(profileStepRequired ? 0 : 1);
         setMessage(error instanceof Error ? error.message : "Mode démo activé.");
       } finally {
         setIsLoading(false);
@@ -617,7 +635,7 @@ function ImagineRSubscriptionContent() {
     }
 
     void load();
-  }, [searchParams]);
+  }, [profileStepRequired, searchParams]);
 
   const data = dashboard ?? familyDashboardMock;
   const youngMembers = data.members.filter((member) => member.profileType === "YOUNG");
@@ -625,6 +643,12 @@ function ImagineRSubscriptionContent() {
   const selectedOffer = offers.find((offer) => offer.id === selectedOfferId) ?? defaultOfferForMember(selectedMember, offers);
   const payer = data.members.find((member) => member.id === data.manager.id) ?? data.members[0];
   const age = getAge(selectedMember?.birthDate ?? null);
+  const selectedMemberAction = selectedMember ? getMemberTitleAction(selectedMember) : null;
+  const canUseSelectedMember =
+    !selectedMemberAction ||
+    selectedMemberAction.canStartSubscription ||
+    selectedMemberAction.status === "REQUEST_DRAFT" ||
+    selectedMember?.pendingRequest?.id === draft?.id;
   const computedSituation =
     selectedMember?.schoolLevel === "HIGHER_EDUCATION"
       ? "Études supérieures"
@@ -632,6 +656,9 @@ function ImagineRSubscriptionContent() {
         ? "Enfant de moins de 11 ans"
         : "Enfant scolarisé";
   const hasDraftInProgress = draft?.status === "DRAFT" && step < steps.length - 1;
+  const firstEditableStep = profileStepRequired ? 0 : 1;
+  const visibleSteps = profileStepRequired ? steps : steps.slice(1);
+  const visibleStep = profileStepRequired ? step : Math.max(step - 1, 0);
   const progressStorageKey =
     draft?.id
       ? getRequestProgressKey(draft.id)
@@ -710,6 +737,10 @@ function ImagineRSubscriptionContent() {
       throw new Error("Choisissez un enfant et une offre imagine R.");
     }
 
+    if (!canUseSelectedMember) {
+      throw new Error(selectedMemberAction?.message ?? "Ce profil ne peut pas lancer une nouvelle demande.");
+    }
+
     if (draft) {
       return { accessToken, request: draft };
     }
@@ -734,6 +765,34 @@ function ImagineRSubscriptionContent() {
 
   function setFormValue<Key extends keyof FormState>(key: Key, value: FormState[Key]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function removeDocument(field: "photoFile" | "identityFile", documentType: ImagineRDocumentType) {
+    const previousFile = form[field];
+    setFormValue(field, null);
+
+    if (!draft) return;
+
+    const accessToken = localStorage.getItem("familyAccessToken");
+    if (!accessToken) return;
+
+    setIsSaving(true);
+    setMessage(null);
+
+    try {
+      await deleteImagineRSubscriptionDocumentFile(accessToken, draft.id, documentType);
+      setDraft(await getSubscriptionRequest(accessToken, draft.id));
+    } catch (error) {
+      setFormValue(field, previousFile);
+      setMessage(error instanceof Error ? error.message : "Impossible de supprimer ce document.");
+      scrollToErrorMessage();
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function previousStep() {
+    setStep((current) => Math.max(current - 1, firstEditableStep));
   }
 
   async function next() {
@@ -872,7 +931,7 @@ function ImagineRSubscriptionContent() {
     >
       <div className="grid gap-8">
         <div className="rounded-2xl border border-neutral-light bg-white p-5 shadow-sm">
-          <SubscriptionStepper currentStep={step} steps={steps} />
+          <SubscriptionStepper currentStep={visibleStep} steps={visibleSteps} />
         </div>
 
         {message ? (
@@ -905,12 +964,34 @@ function ImagineRSubscriptionContent() {
                 />
               ))}
             </div>
-            <InfoBox className="mt-5">Les informations connues du profil seront préremplies dans le dossier.</InfoBox>
+            <div className="mt-5 grid gap-3">
+              <InfoBox>Les informations connues du profil seront préremplies dans le dossier.</InfoBox>
+              {selectedMemberAction && selectedMemberAction.blocksNewSubscription && selectedMemberAction.status !== "REQUEST_DRAFT" ? (
+                <InfoBox tone="orange">
+                  <span className="font-semibold text-idfm-anthracite">{selectedMemberAction.statusLabel}</span>
+                  <span className="mt-1 block">{selectedMemberAction.message}</span>
+                  <Link href={selectedMemberAction.primaryHref} className="mt-3 inline-flex font-semibold text-idfm-interaction">
+                    {selectedMemberAction.primaryLabel}
+                  </Link>
+                </InfoBox>
+              ) : null}
+              {selectedMemberAction?.status === "REQUEST_DRAFT" && selectedMember?.pendingRequest?.id !== draft?.id ? (
+                <InfoBox tone="orange">
+                  Un brouillon existe déjà pour ce profil. En continuant, nous le reprenons au lieu d'en créer un nouveau.
+                </InfoBox>
+              ) : null}
+            </div>
           </SectionCard>
         ) : null}
 
         {step === 1 ? (
           <SectionCard title="L'élève disposait-il d'un forfait imagine R sur l'année scolaire 2025/2026 ?">
+            {!profileStepRequired && selectedMember ? (
+              <InfoBox className="mb-5">
+                <strong>Souscription pour {selectedMember.firstName} {selectedMember.lastName}</strong>
+                <span className="mt-1 block">{selectedOffer?.name ?? "Imagine R Scolaire"}</span>
+              </InfoBox>
+            ) : null}
             <ChoiceCards value={form.hasPreviousImagineR} onChange={(value) => setFormValue("hasPreviousImagineR", value)} />
           </SectionCard>
         ) : null}
@@ -1006,7 +1087,13 @@ function ImagineRSubscriptionContent() {
               <div>
                 <h3 className="text-xl font-bold text-idfm-anthracite">Photo du titulaire</h3>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <UploadBox file={form.photoFile} label="Charger une photo" onFile={(file) => setFormValue("photoFile", file)} />
+                  <UploadBox
+                    disabled={isSaving}
+                    file={form.photoFile}
+                    label="Charger une photo"
+                    onFile={(file) => setFormValue("photoFile", file)}
+                    onRemove={() => void removeDocument("photoFile", "PHOTO")}
+                  />
                   <div className="rounded-2xl bg-idfm-light p-5 text-sm leading-6 text-neutral-medium">
                     Photo récente, de face, sur fond clair. Formats JPEG, PNG ou BMP.
                   </div>
@@ -1086,7 +1173,13 @@ function ImagineRSubscriptionContent() {
                 <h3 className="text-xl font-bold text-idfm-anthracite">Justificatif d&apos;identité</h3>
                 <p className="mt-2 text-sm text-neutral-medium">Carte d&apos;identité, passeport ou acte de naissance.</p>
                 <div className="mt-4">
-                  <UploadBox file={form.identityFile} label="Joindre le document" onFile={(file) => setFormValue("identityFile", file)} />
+                  <UploadBox
+                    disabled={isSaving}
+                    file={form.identityFile}
+                    label="Joindre le document"
+                    onFile={(file) => setFormValue("identityFile", file)}
+                    onRemove={() => void removeDocument("identityFile", "ID_DOCUMENT")}
+                  />
                 </div>
               </div>
             </div>
@@ -1205,10 +1298,10 @@ function ImagineRSubscriptionContent() {
 
         {step < 10 && step !== 9 ? (
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <Button type="button" variant="ghost" onClick={() => setStep((current) => Math.max(current - 1, 0))}>
+            <Button type="button" variant="ghost" onClick={previousStep} disabled={step <= firstEditableStep}>
               Retour
             </Button>
-            <Button type="button" onClick={next} disabled={isSaving || !selectedMember || !selectedOffer}>
+            <Button type="button" onClick={next} disabled={isSaving || !selectedMember || !selectedOffer || !canUseSelectedMember}>
               {isSaving ? "Enregistrement..." : step === 9 ? "Confirmer la demande" : step === 8 ? "Signer et continuer" : "Continuer"}
             </Button>
           </div>

@@ -1,0 +1,2 @@
+ALTER TYPE "SubscriptionRequestStatus" ADD VALUE IF NOT EXISTS 'REJECTED';
+ALTER TYPE "SubscriptionRequestStatus" ADD VALUE IF NOT EXISTS 'EXPIRED';

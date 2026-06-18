@@ -19,6 +19,11 @@ export class HouseholdsController {
     return this.householdsService.getDashboardForUser(request.user.sub);
   }
 
+  @Get("me/procedures")
+  async getMyHouseholdProcedures(@Req() request: AuthenticatedRequest) {
+    return this.householdsService.getProceduresForUser(request.user.sub);
+  }
+
   @Get("me/members")
   async getMyHouseholdMembers(@Req() request: AuthenticatedRequest) {
     return this.householdsService.getHouseholdMembersForUser(request.user.sub);

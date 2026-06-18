@@ -6,6 +6,7 @@ import type {
   FoundPassResponse,
   FinalChoicePayload,
   HouseholdDashboardResponse,
+  HouseholdProceduresResponse,
   LostPassPayload,
   LostPassResponse,
   MemberDetailResponse,
@@ -58,6 +59,20 @@ export async function getMyHouseholdDashboard(accessToken: string): Promise<Hous
   }
 
   return response.json() as Promise<HouseholdDashboardResponse>;
+}
+
+export async function getMyHouseholdProcedures(accessToken: string): Promise<HouseholdProceduresResponse> {
+  const response = await fetch(buildApiUrl("/api/households/me/procedures"), {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json() as Promise<HouseholdProceduresResponse>;
 }
 
 export async function getHouseholdMemberDetail(

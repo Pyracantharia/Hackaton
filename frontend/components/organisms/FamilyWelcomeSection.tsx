@@ -116,7 +116,7 @@ const welcomeActions = [
     label: "Choisir un titre",
   },
   {
-    href: "/dashboard/family?tab=services",
+    href: "/dashboard/family?tab=demarches",
     imageSrc: "/assets/illustrations/hand-holding-ticket.png",
     label: "Suivre mes démarches",
   },
@@ -282,7 +282,7 @@ export function FamilyWelcomeSection({
       <section aria-labelledby="welcome-help-title" className="rounded-3xl border border-neutral-light bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h3 id="welcome-help-title" className="text-xl font-bold text-idfm-anthracite">Besoin d'aide ?</h3>
+            <h3 id="welcome-help-title" className="text-xl font-bold text-idfm-anthracite">Besoin d&apos;aide ?</h3>
             <p className="mt-1 text-sm text-neutral-medium">Les réponses courtes pour comprendre le compte famille.</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">

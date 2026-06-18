@@ -7,6 +7,8 @@ import type {
   UpdateImagineRSubscriptionPayload,
 } from "./types";
 
+export type ImagineRDocumentType = "PHOTO" | "ID_DOCUMENT" | "SCHOOL_CERTIFICATE" | "SCHOLARSHIP_CERTIFICATE" | "SITUATION_PROOF" | "PAYMENT_METHOD" | "ADDRESS_PROOF";
+
 async function parseApiError(response: Response) {
   const data = await response.json().catch(() => null);
   const message = Array.isArray(data?.message)
@@ -141,7 +143,7 @@ export async function updateImagineRSubscriptionDraft(
 export async function uploadImagineRSubscriptionDocumentFile(
   accessToken: string,
   id: string,
-  documentType: "PHOTO" | "ID_DOCUMENT" | "SCHOOL_CERTIFICATE" | "SCHOLARSHIP_CERTIFICATE" | "SITUATION_PROOF" | "PAYMENT_METHOD" | "ADDRESS_PROOF",
+  documentType: ImagineRDocumentType,
   file: File,
 ) {
   const formData = new FormData();
@@ -153,6 +155,25 @@ export async function uploadImagineRSubscriptionDocumentFile(
       Authorization: `Bearer ${accessToken}`,
     },
     body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json();
+}
+
+export async function deleteImagineRSubscriptionDocumentFile(
+  accessToken: string,
+  id: string,
+  documentType: ImagineRDocumentType,
+) {
+  const response = await fetch(buildApiUrl(`/api/subscription-requests/${id}/imagine-r/documents/${documentType}/file`), {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
   });
 
   if (!response.ok) {
