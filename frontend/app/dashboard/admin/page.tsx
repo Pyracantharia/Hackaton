@@ -63,6 +63,11 @@ const requestStatusLabels: Record<SubscriptionRequestStatus, string> = {
   CANCELLED: "Annulee",
 };
 
+function getStatusLabel(status: string) {
+  if (status === "DRAFT") return "Brouillon";
+  return status;
+}
+
 function parseStoredUser(value: string | null): StoredUser | null {
   if (!value) return null;
 
@@ -179,7 +184,7 @@ function ManagementModal({
                   <div key={subscription.id} className="rounded border border-neutral-light p-3 text-sm">
                     <div className="flex items-center justify-between gap-3">
                       <span className="font-semibold text-idfm-anthracite">{subscription.productName}</span>
-                      <Badge tone={badgeTone(subscription.status)}>{subscription.status}</Badge>
+                      <Badge tone={badgeTone(subscription.status)}>{getStatusLabel(subscription.status)}</Badge>
                     </div>
                     <p className="mt-2 text-neutral-medium">
                       Passe : {subscription.passNumberMasked ?? "numero non disponible"}

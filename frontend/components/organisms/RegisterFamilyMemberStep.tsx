@@ -236,7 +236,7 @@ export function RegisterFamilyMemberStep({ errors, members, onChange }: Register
               >
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-bold text-idfm-anthracite">{card.title}</h3>
-                  {card.enabled ? <Badge tone={isSelected ? "blue" : "green"}>{isSelected ? "Sélectionné" : "MVP"}</Badge> : <Badge tone="orange">Bientôt</Badge>}
+                  {isSelected ? <Badge tone="blue">Sélectionné</Badge> : null}
                 </div>
                 <p className="mt-3 text-sm leading-6 text-neutral-medium">{card.description}</p>
               </button>

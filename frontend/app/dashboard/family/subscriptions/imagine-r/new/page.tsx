@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/atoms/Badge";
@@ -92,6 +92,55 @@ type FormState = {
   signatureDocumentsAccepted: boolean;
 };
 
+type SavedProgress = {
+  draftId: string | null;
+  form: FormState;
+  selectedMemberId: string | null;
+  selectedOfferId: string | null;
+  step: number;
+  updatedAt: string;
+};
+
+const PROGRESS_STORAGE_PREFIX = "imagineRSubscriptionProgress:";
+
+function getRequestProgressKey(requestId: string) {
+  return `${PROGRESS_STORAGE_PREFIX}request:${requestId}`;
+}
+
+function getSelectionProgressKey(memberId: string, offerId: string) {
+  return `${PROGRESS_STORAGE_PREFIX}selection:${memberId}:${offerId}`;
+}
+
+function readSavedProgress(keys: Array<string | null>) {
+  for (const key of keys) {
+    if (!key) continue;
+
+    try {
+      const rawValue = localStorage.getItem(key);
+      if (!rawValue) continue;
+
+      const parsed = JSON.parse(rawValue) as SavedProgress;
+      if (parsed?.form && typeof parsed.step === "number") {
+        return parsed;
+      }
+    } catch {
+      localStorage.removeItem(key);
+    }
+  }
+
+  return null;
+}
+
+function removeSavedProgress(requestId: string | null, memberId: string | null, offerId: string | null) {
+  if (requestId) {
+    localStorage.removeItem(getRequestProgressKey(requestId));
+  }
+
+  if (memberId && offerId) {
+    localStorage.removeItem(getSelectionProgressKey(memberId, offerId));
+  }
+}
+
 function getAge(birthDate: string | null) {
   if (!birthDate) return null;
   const birth = new Date(birthDate);
@@ -171,6 +220,21 @@ function SectionCard({ children, title }: { children: ReactNode; title: string }
       <div className="mt-5">{children}</div>
     </section>
   );
+}
+
+function scrollToFormTop() {
+  window.setTimeout(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, 50);
+}
+
+function scrollToErrorMessage() {
+  window.setTimeout(() => {
+    document.getElementById("imagine-r-error-message")?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  }, 50);
 }
 
 function ChoiceCards({
@@ -277,6 +341,8 @@ function ImagineRSubscriptionContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [pendingNavigationHref, setPendingNavigationHref] = useState<string | null>(null);
+  const bypassNavigationWarning = useRef(false);
   const [form, setForm] = useState<FormState>({
     hasPreviousImagineR: null,
     hasCustomerNumber: null,
@@ -305,6 +371,8 @@ function ImagineRSubscriptionContent() {
 
     async function load() {
       try {
+        let loadedRequest: SubscriptionRequestResponse | null = null;
+
         const [dashboardResponse, offersResponse] = await Promise.all([
           accessToken ? getMyHouseholdDashboard(accessToken) : Promise.resolve(familyDashboardMock),
           getTitleOffers().catch(() => titleOffersMock),
@@ -315,6 +383,7 @@ function ImagineRSubscriptionContent() {
 
         if (requestId && accessToken) {
           const request = await getSubscriptionRequest(accessToken, requestId);
+          loadedRequest = request;
           setDraft(request);
           setSelectedMemberId(request.member.id);
           setSelectedOfferId(request.offer.id);
@@ -342,9 +411,17 @@ function ImagineRSubscriptionContent() {
           }
         }
 
-        const memberId = searchParams.get("memberId") ?? dashboardResponse.members.find((member) => member.profileType === "YOUNG")?.id ?? dashboardResponse.members[0]?.id ?? null;
+        const memberId = loadedRequest?.member.id ?? searchParams.get("memberId") ?? dashboardResponse.members.find((member) => member.profileType === "YOUNG")?.id ?? dashboardResponse.members[0]?.id ?? null;
         const member = dashboardResponse.members.find((candidate) => candidate.id === memberId);
-        const offer = offersResponse.find((candidate) => candidate.id === searchParams.get("offerId")) ?? defaultOfferForMember(member, offersResponse);
+        const offer = loadedRequest?.offer ?? offersResponse.find((candidate) => candidate.id === searchParams.get("offerId")) ?? defaultOfferForMember(member, offersResponse);
+        const savedProgress =
+          loadedRequest?.status === "DRAFT" || !loadedRequest
+            ? readSavedProgress([
+                loadedRequest ? getRequestProgressKey(loadedRequest.id) : null,
+                member && offer ? getSelectionProgressKey(member.id, offer.id) : null,
+              ])
+            : null;
+
         setSelectedMemberId((current) => current ?? memberId);
         setSelectedOfferId((current) => current ?? offer?.id ?? null);
         const storedPayerInfo = readStoredPayerInfo();
@@ -356,6 +433,22 @@ function ImagineRSubscriptionContent() {
             ? current.payerAddress
             : storedPayerInfo?.payerAddress ?? current.payerAddress,
         }));
+
+        if (savedProgress) {
+          setSelectedMemberId(savedProgress.selectedMemberId ?? memberId);
+          setSelectedOfferId(savedProgress.selectedOfferId ?? offer?.id ?? null);
+          setStep(Math.min(Math.max(savedProgress.step, 0), steps.length - 2));
+          setForm((current) => ({
+            ...current,
+            ...savedProgress.form,
+            schoolLevel: savedProgress.form.schoolLevel ?? member?.schoolLevel ?? current.schoolLevel,
+          }));
+        } else {
+          setForm((current) => ({
+            ...current,
+            schoolLevel: member?.schoolLevel ?? current.schoolLevel,
+          }));
+        }
       } catch (error) {
         setDashboard(familyDashboardMock);
         setMessage(error instanceof Error ? error.message : "Mode démo activé.");
@@ -379,6 +472,73 @@ function ImagineRSubscriptionContent() {
       : age !== null && age < 11
         ? "Enfant de moins de 11 ans"
         : "Enfant scolarisé";
+  const hasDraftInProgress = draft?.status === "DRAFT" && step < steps.length - 1;
+  const progressStorageKey =
+    draft?.id
+      ? getRequestProgressKey(draft.id)
+      : selectedMember && selectedOffer
+        ? getSelectionProgressKey(selectedMember.id, selectedOffer.id)
+        : null;
+
+  useEffect(() => {
+    if (!progressStorageKey || isLoading || step >= steps.length - 1) return;
+
+    const progress: SavedProgress = {
+      draftId: draft?.id ?? null,
+      form,
+      selectedMemberId: selectedMember?.id ?? selectedMemberId,
+      selectedOfferId: selectedOffer?.id ?? selectedOfferId,
+      step,
+      updatedAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem(progressStorageKey, JSON.stringify(progress));
+  }, [draft?.id, form, isLoading, progressStorageKey, selectedMember?.id, selectedMemberId, selectedOffer?.id, selectedOfferId, step]);
+
+  useEffect(() => {
+    if (!hasDraftInProgress) return;
+
+    function beforeUnload(event: BeforeUnloadEvent) {
+      if (bypassNavigationWarning.current) return;
+
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    function confirmNavigation(event: MouseEvent) {
+      const link = (event.target as HTMLElement | null)?.closest("a[href]");
+
+      if (!link || !(link instanceof HTMLAnchorElement)) return;
+      if (link.target === "_blank" || link.href.startsWith("mailto:") || link.href.startsWith("tel:")) return;
+
+      const targetUrl = new URL(link.href);
+      if (targetUrl.origin !== window.location.origin) return;
+      if (targetUrl.pathname === window.location.pathname && targetUrl.search === window.location.search) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      setPendingNavigationHref(link.href);
+    }
+
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("click", confirmNavigation, true);
+
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("click", confirmNavigation, true);
+    };
+  }, [hasDraftInProgress]);
+
+  function closeNavigationModal() {
+    setPendingNavigationHref(null);
+  }
+
+  function confirmNavigation() {
+    if (!pendingNavigationHref) return;
+
+    bypassNavigationWarning.current = true;
+    window.location.href = pendingNavigationHref;
+  }
 
   async function ensureDraft() {
     const accessToken = localStorage.getItem("familyAccessToken");
@@ -401,6 +561,7 @@ function ImagineRSubscriptionContent() {
       payerMemberId: payer?.id,
     });
     setDraft(request);
+    removeSavedProgress(null, selectedMember.id, selectedOffer.id);
     router.replace(`/dashboard/family/subscriptions/imagine-r/new?memberId=${selectedMember.id}&offerId=${selectedOffer.id}&requestId=${request.id}`);
     return { accessToken, request };
   }
@@ -508,11 +669,14 @@ function ImagineRSubscriptionContent() {
         const { accessToken, request } = await ensureDraft();
         const submitted = await submitImagineRSubscriptionDraft(accessToken, request.id);
         setDraft(submitted);
+        removeSavedProgress(request.id, selectedMember?.id ?? null, selectedOffer?.id ?? null);
       }
 
       setStep((current) => Math.min(current + 1, steps.length - 1));
+      scrollToFormTop();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Impossible d'enregistrer cette étape.");
+      scrollToErrorMessage();
     } finally {
       setIsSaving(false);
     }
@@ -549,10 +713,21 @@ function ImagineRSubscriptionContent() {
           <SubscriptionStepper currentStep={step} steps={steps} />
         </div>
 
-        {message ? <InfoBox>{message}</InfoBox> : null}
+        {message ? (
+          <div id="imagine-r-error-message">
+            <InfoBox tone="red" className="border-2">
+              <strong className="block text-base">Une action est nécessaire pour continuer.</strong>
+              <span className="mt-1 block">{message}</span>
+            </InfoBox>
+          </div>
+        ) : null}
 
         {step === 0 ? (
           <SectionCard title="Pour quel enfant souhaitez-vous souscrire ?">
+            <InfoBox className="mb-5">
+              <strong>Repère d&apos;âge :</strong> le forfait Junior concerne les enfants de moins de 11 ans. Le forfait Scolaire
+              concerne les élèves de 11 ans et plus, selon leur niveau et leur établissement.
+            </InfoBox>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {youngMembers.map((member) => (
                 <ProfilePickerCard
@@ -598,8 +773,14 @@ function ImagineRSubscriptionContent() {
                   Les forfaits imagine R Scolaire et Junior sont annuels, toutes zones, réservés aux élèves résidant en Île-de-France.
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <InfoBox>Junior : 17,20 € / an + 8 € de frais.</InfoBox>
-                  <InfoBox>Scolaire : 393,30 € / an + 8 € de frais.</InfoBox>
+                  <InfoBox>
+                    <strong>Junior</strong>
+                    <span className="mt-1 block">Moins de 11 ans : 17,20 € / an + 8 € de frais.</span>
+                  </InfoBox>
+                  <InfoBox>
+                    <strong>Scolaire</strong>
+                    <span className="mt-1 block">11 ans et plus, élève scolarisé : 393,30 € / an + 8 € de frais.</span>
+                  </InfoBox>
                 </div>
                 <p>Le dossier est traité sous 10 jours maximum hors week-end et jours fériés.</p>
               </div>
@@ -855,6 +1036,34 @@ function ImagineRSubscriptionContent() {
           </div>
         ) : null}
       </div>
+
+      {pendingNavigationHref ? (
+        <div
+          aria-labelledby="leave-subscription-title"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-idfm-anthracite/55 px-0 sm:items-center sm:px-5"
+          role="dialog"
+        >
+          <div className="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl">
+            <Badge tone="orange">Démarche en cours</Badge>
+            <h2 id="leave-subscription-title" className="mt-4 text-xl font-bold text-idfm-anthracite">
+              Quitter cette souscription ?
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-medium">
+              Votre progression est sauvegardée automatiquement. Vous pourrez reprendre cette demande depuis votre espace famille.
+            </p>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <Button type="button" variant="secondary" onClick={closeNavigationModal}>
+                Continuer la démarche
+              </Button>
+              <Button type="button" onClick={confirmNavigation}>
+                Quitter la page
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </DashboardLayout>
   );
 }

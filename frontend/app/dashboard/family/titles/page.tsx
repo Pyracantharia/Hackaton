@@ -122,7 +122,7 @@ function FamilyTitlesContent() {
                 <div>
                   <h2 className="text-2xl font-bold text-idfm-anthracite">Demandes en attente</h2>
                   <p className="mt-1 text-sm text-neutral-medium">
-                    Suivez les dossiers envoyés avant qu'un titre soit rattaché au foyer.
+                    Suivez les dossiers envoyés avant qu&apos;un titre soit rattaché au foyer.
                   </p>
                 </div>
               </div>
@@ -134,6 +134,12 @@ function FamilyTitlesContent() {
                   if (!request) {
                     return null;
                   }
+
+                  const actionHref =
+                    request.status === "DRAFT"
+                      ? `/dashboard/family/subscriptions/imagine-r/new?requestId=${request.id}`
+                      : `/dashboard/family/subscriptions/${request.id}/confirmation`;
+                  const actionLabel = request.status === "DRAFT" ? "Finaliser la demande" : "Voir l'état de ma demande";
 
                   return (
                     <article key={request.id} className="flex h-full flex-col rounded-2xl border border-status-warning bg-orange-50 p-5 shadow-sm">
@@ -164,10 +170,10 @@ function FamilyTitlesContent() {
                         </div>
                       ) : null}
                       <Link
-                        href={`/dashboard/family/subscriptions/${request.id}/confirmation`}
+                        href={actionHref}
                         className="mt-5 inline-flex min-h-12 items-center justify-center rounded-md bg-idfm-interaction px-5 text-sm font-semibold text-white transition hover:bg-idfm-focus focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus"
                       >
-                        Voir l'état de ma demande
+                        {actionLabel}
                       </Link>
                     </article>
                   );
@@ -180,7 +186,7 @@ function FamilyTitlesContent() {
             <div>
               <h2 className="text-2xl font-bold text-idfm-anthracite">Titres du foyer</h2>
               <p className="mt-1 text-sm text-neutral-medium">
-                Aucun abonnement actif n'est cree automatiquement. Chaque profil choisit d'abord une offre.
+                Aucun abonnement actif n&apos;est cree automatiquement. Chaque profil choisit d&apos;abord une offre.
               </p>
             </div>
           </div>
@@ -188,8 +194,15 @@ function FamilyTitlesContent() {
           <div className="mt-5 grid gap-4 lg:grid-cols-3">
             {data.members.map((member) => {
               const actionHref = member.pendingRequest
-                ? `/dashboard/family/subscriptions/${member.pendingRequest.id}/confirmation`
+                ? member.pendingRequest.status === "DRAFT"
+                  ? `/dashboard/family/subscriptions/imagine-r/new?requestId=${member.pendingRequest.id}`
+                  : `/dashboard/family/subscriptions/${member.pendingRequest.id}/confirmation`
                 : `/dashboard/family/titles/recommendation?memberId=${member.id}`;
+              const actionLabel = member.pendingRequest
+                ? member.pendingRequest.status === "DRAFT"
+                  ? "Finaliser la demande"
+                  : "Voir l'état de ma demande"
+                : "Trouver une offre";
 
               return (
                 <article key={member.id} className="flex h-full flex-col rounded-2xl border border-neutral-light bg-white p-5 shadow-sm">
@@ -220,7 +233,7 @@ function FamilyTitlesContent() {
                     href={actionHref}
                     className="mt-5 inline-flex min-h-12 items-center justify-center rounded-md bg-idfm-interaction px-5 text-sm font-semibold text-white transition hover:bg-idfm-focus focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus"
                   >
-                    {member.pendingRequest ? "Voir l'état de ma demande" : "Trouver une offre"}
+                    {actionLabel}
                   </Link>
                 </article>
               );

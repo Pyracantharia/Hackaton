@@ -1,5 +1,3 @@
-import { Badge } from "../atoms/Badge";
-
 type LifeSituationCardProps = {
   description: string;
   disabled?: boolean;
@@ -26,7 +24,6 @@ export function LifeSituationCard({
     >
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-lg font-bold text-idfm-anthracite">{label}</h3>
-        {disabled ? <Badge tone="orange">Bientôt</Badge> : isSelected ? <Badge tone="blue">Choisi</Badge> : null}
       </div>
       <p className="mt-2 text-sm leading-6 text-neutral-medium">{description}</p>
     </button>

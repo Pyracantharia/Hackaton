@@ -60,7 +60,7 @@ function SubscriptionConfirmationContent() {
     const accessToken = localStorage.getItem("familyAccessToken");
 
     if (!accessToken) {
-      startTransition(() => {
+      void Promise.resolve().then(() => {
         setMessage("Connectez-vous pour afficher le suivi de cette demande.");
         setIsLoading(false);
       });
@@ -74,7 +74,6 @@ function SubscriptionConfirmationContent() {
   }, [params.id]);
 
   const userName = request?.payer.firstName ?? "Mon espace";
-  const statusLabel = request ? getSubscriptionRequestStatusLabel(request.status) : null;
   const renewal = request?.renewal ?? emptyRenewal;
 
   async function handleCancelRenewal() {
@@ -99,6 +98,8 @@ function SubscriptionConfirmationContent() {
       setIsCancellingRenewal(false);
     }
   }
+  const isDraft = request?.status === "DRAFT";
+  const requestStatusLabel = request ? getSubscriptionRequestStatusLabel(request.status) : "";
 
   return (
     <DashboardLayout
@@ -110,7 +111,7 @@ function SubscriptionConfirmationContent() {
         { label: "Confirmation" },
       ]}
       subtitle="Votre demande est enregistree et suivie dans l'espace famille."
-      summaryItems={request ? [request.offer.name, statusLabel ?? "En cours", `Porteur : ${request.member.firstName}`] : ["Suivi de demande"]}
+      summaryItems={request ? [request.offer.name, requestStatusLabel, `Porteur : ${request.member.firstName}`] : ["Suivi de demande"]}
       title="Demande envoyee"
       userName={userName}
     >
@@ -149,7 +150,7 @@ function SubscriptionConfirmationContent() {
               </div>
               <div className="rounded-2xl bg-idfm-light p-4">
                 <p className="text-neutral-medium">Statut</p>
-                <p className="font-bold text-idfm-anthracite">{statusLabel}</p>
+                <p className="font-bold text-idfm-anthracite">{requestStatusLabel}</p>
               </div>
             </div>
           </section>
@@ -214,9 +215,21 @@ function SubscriptionConfirmationContent() {
           </section>
 
           <div className="flex flex-col gap-3 sm:flex-row">
+            {isDraft ? (
+              <Link
+                href={`/dashboard/family/subscriptions/imagine-r/new?requestId=${request.id}`}
+                className="inline-flex min-h-12 items-center justify-center rounded-md bg-idfm-interaction px-5 text-sm font-semibold text-white transition hover:bg-idfm-focus focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus"
+              >
+                Finaliser la demande
+              </Link>
+            ) : null}
             <Link
               href="/dashboard/family"
-              className="inline-flex min-h-12 items-center justify-center rounded-md bg-idfm-interaction px-5 text-sm font-semibold text-white transition hover:bg-idfm-focus focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus"
+              className={`inline-flex min-h-12 items-center justify-center rounded-md px-5 text-sm font-semibold transition focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-idfm-focus ${
+                isDraft
+                  ? "border border-idfm-interaction bg-white text-idfm-interaction hover:bg-idfm-light"
+                  : "bg-idfm-interaction text-white hover:bg-idfm-focus"
+              }`}
             >
               Retour a mon foyer
             </Link>
