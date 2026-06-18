@@ -284,10 +284,10 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Image
-              src="/assets/logos/idfm-logo-horizontal.png"
-              alt="Ile-de-France Mobilites"
-              width={180}
-              height={48}
+              src="/assets/logos/idfm-connect-logo.svg"
+              alt="Ile-de-France Mobilites Connect"
+              width={220}
+              height={44}
               className="h-10 w-auto"
             />
             <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">
