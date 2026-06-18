@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Req, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import type { AuthenticatedRequest } from "src/auth/guards/jwt-auth.guard";
 import { JwtAuthGuard } from "src/auth/guards/jwt-auth.guard";
 import { CreateSubscriptionRequestDto } from "./dtos/create-subscription-request.dto";
@@ -34,6 +35,22 @@ export class SubscriptionRequestsController {
     @Body() data: UpdateImagineRRequestDto,
   ) {
     return this.subscriptionRequestsService.updateImagineRForUser(request.user.sub, id, data);
+  }
+
+  @Post(":id/imagine-r/documents/:documentType/file")
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 8 * 1024 * 1024 } }))
+  async uploadImagineRDocumentFile(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Param("documentType") documentType: string,
+    @UploadedFile() file: any,
+  ) {
+    return this.subscriptionRequestsService.uploadImagineRDocumentFileForUser(
+      request.user.sub,
+      id,
+      documentType,
+      file,
+    );
   }
 
   @Post(":id/imagine-r/submit")

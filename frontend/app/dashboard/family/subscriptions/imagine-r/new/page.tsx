@@ -19,6 +19,7 @@ import {
   getSubscriptionRequest,
   submitImagineRSubscriptionDraft,
   updateImagineRSubscriptionDraft,
+  uploadImagineRSubscriptionDocumentFile,
 } from "@/lib/api/subscriptions";
 import { getTitleOffers } from "@/lib/api/titles";
 import type {
@@ -620,11 +621,14 @@ function ImagineRSubscriptionContent() {
       if (step === 6) {
         if (!form.schoolZipOrCity || !form.schoolName) throw new Error("Renseignez l'établissement scolaire.");
         if (!form.photoFile || !form.identityFile) throw new Error("Ajoutez la photo et le justificatif d'identité pour continuer.");
+        if (!form.photoFile.sourceFile || !form.identityFile.sourceFile) {
+          throw new Error("Veuillez sélectionner à nouveau la photo et le justificatif d'identité pour envoyer les fichiers.");
+        }
         const [photoPreviewDataUrl, identityPreviewDataUrl] = await Promise.all([
           ensurePreviewDataUrl(form.photoFile),
           ensurePreviewDataUrl(form.identityFile),
         ]);
-        await save({
+        const updated = await save({
           schoolZipOrCity: form.schoolZipOrCity,
           schoolName: form.schoolName,
           imagineRSchoolLevel: form.schoolLevel,
@@ -653,6 +657,13 @@ function ImagineRSubscriptionContent() {
               : []),
           ],
         });
+        const accessToken = localStorage.getItem("familyAccessToken");
+        if (!accessToken) throw new Error("Connectez-vous pour envoyer les fichiers justificatifs.");
+        await Promise.all([
+          uploadImagineRSubscriptionDocumentFile(accessToken, updated.id, "PHOTO", form.photoFile.sourceFile),
+          uploadImagineRSubscriptionDocumentFile(accessToken, updated.id, "ID_DOCUMENT", form.identityFile.sourceFile),
+        ]);
+        setDraft(await getSubscriptionRequest(accessToken, updated.id));
       }
       if (step === 8) {
         if (!form.signatureInformationAccepted || !form.signaturePayerAccepted || !form.signatureTermsAccepted || !form.signatureDocumentsAccepted) {

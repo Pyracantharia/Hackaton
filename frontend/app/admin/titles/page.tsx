@@ -326,6 +326,11 @@ function RequestModal({
                 <article key={document.id} className="rounded-md border border-neutral-light p-4">
                   <div className="grid gap-4 lg:grid-cols-[1fr_220px]">
                     <div>
+                      {(() => {
+                        const hasPreview = Boolean(document.hasStoredFile || document.simulatedPreviewDataUrl);
+
+                        return (
+                          <>
                       <div className="flex flex-wrap items-center gap-2">
                         <h4 className="font-bold text-idfm-anthracite">{document.label}</h4>
                         <Badge tone={badgeTone(document.status)}>{documentStatusLabels[document.status]}</Badge>
@@ -336,16 +341,21 @@ function RequestModal({
                       <div className="mt-3 rounded-md border border-dashed border-neutral-light bg-neutral-xlight p-3 text-sm">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <p className="font-semibold text-idfm-anthracite">{document.simulatedFileName ?? "Fichier simulé non disponible"}</p>
+                            <p className="font-semibold text-idfm-anthracite">{document.simulatedFileName ?? "Aucun fichier reçu"}</p>
                             <p className="mt-1 text-neutral-medium">
-                              {document.simulatedMimeType ?? "Aperçu placeholder"}{document.simulatedSizeBytes ? ` - ${Math.round(document.simulatedSizeBytes / 1024)} Ko` : ""}
+                              {document.simulatedMimeType ?? "En attente d'upload"}{document.simulatedSizeBytes ? ` - ${Math.round(document.simulatedSizeBytes / 1024)} Ko` : ""}
                             </p>
                           </div>
-                          <Button type="button" variant="secondary" disabled={isBusy} onClick={() => void openDocumentPreview(document)}>
-                            Voir l&apos;image
-                          </Button>
+                          {hasPreview ? (
+                            <Button type="button" variant="secondary" disabled={isBusy} onClick={() => void openDocumentPreview(document)}>
+                              Voir l&apos;image
+                            </Button>
+                          ) : null}
                         </div>
                       </div>
+                          </>
+                        );
+                      })()}
                       {document.rejectionReason ? <p className="mt-2 text-sm font-semibold text-status-danger">Motif : {document.rejectionReason}</p> : null}
                     </div>
                     <div className="flex flex-col gap-2">

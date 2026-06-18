@@ -138,6 +138,30 @@ export async function updateImagineRSubscriptionDraft(
   return response.json() as Promise<SubscriptionRequestResponse>;
 }
 
+export async function uploadImagineRSubscriptionDocumentFile(
+  accessToken: string,
+  id: string,
+  documentType: "PHOTO" | "ID_DOCUMENT" | "SCHOOL_CERTIFICATE" | "SCHOLARSHIP_CERTIFICATE" | "SITUATION_PROOF" | "PAYMENT_METHOD" | "ADDRESS_PROOF",
+  file: File,
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(buildApiUrl(`/api/subscription-requests/${id}/imagine-r/documents/${documentType}/file`), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json();
+}
+
 export async function submitImagineRSubscriptionDraft(
   accessToken: string,
   id: string,

@@ -318,6 +318,16 @@ export class SubscriptionRequestsService {
     return storedFileName;
   }
 
+  private async storeDocumentBuffer(buffer: Buffer, fileName?: string | null, mimeType?: string | null) {
+    const extension = this.extensionFromMimeType(mimeType) ?? (extname(fileName ?? "") || ".bin");
+    const storedFileName = `${randomUUID()}${extension}`;
+
+    await mkdir(this.documentUploadDirectory, { recursive: true });
+    await writeFile(join(this.documentUploadDirectory, storedFileName), buffer);
+
+    return storedFileName;
+  }
+
   private defaultImagineRDates() {
     return {
       forfaitStartDate: new Date("2026-09-01T00:00:00.000Z"),
@@ -634,6 +644,61 @@ export class SubscriptionRequestsService {
     });
 
     return this.formatRequest(updated);
+  }
+
+  async uploadImagineRDocumentFileForUser(userId: string, id: string, documentType: string, file: any) {
+    if (!file?.buffer) {
+      throw new BadRequestException("Aucun fichier justificatif reçu.");
+    }
+
+    const existing = await this.prismaService.subscriptionRequest.findFirst({
+      where: {
+        id,
+        flowType: "IMAGINE_R",
+        household: { ownerId: userId },
+      },
+      include: {
+        documents: true,
+        offer: true,
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException("Demande imagine R introuvable.");
+    }
+
+    const document = existing.documents.find((candidate) => candidate.documentType === documentType);
+
+    if (!document) {
+      throw new NotFoundException("Justificatif introuvable.");
+    }
+
+    const storedFilePath = await this.storeDocumentBuffer(file.buffer, file.originalname, file.mimetype);
+
+    const updated = await this.prismaService.subscriptionDocument.update({
+      where: { id: document.id },
+      data: {
+        status: "UPLOADED",
+        simulatedFileName: file.originalname,
+        simulatedMimeType: file.mimetype,
+        simulatedSizeBytes: file.size,
+        simulatedPreviewDataUrl: null,
+        storedFilePath,
+        uploadedAt: new Date(),
+      },
+    });
+
+    return {
+      id: updated.id,
+      documentType: updated.documentType,
+      label: updated.label,
+      status: updated.status,
+      simulatedFileName: updated.simulatedFileName,
+      simulatedMimeType: updated.simulatedMimeType,
+      simulatedSizeBytes: updated.simulatedSizeBytes,
+      hasStoredFile: Boolean(updated.storedFilePath),
+      uploadedAt: this.formatDate(updated.uploadedAt),
+    };
   }
 
   async submitImagineRForUser(userId: string, id: string) {
