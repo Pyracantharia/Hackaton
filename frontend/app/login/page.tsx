@@ -77,8 +77,20 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-neutral-xlight">
-
       <section className="mx-auto w-full max-w-6xl px-5 pb-12 pt-6">
+        <div className="mb-10 flex justify-center">
+          <div className="flex justify-center">
+            <Image
+              src="/assets/logos/idfm-logo-horizontal.png"
+              alt="Ile-de-France Mobilites"
+              width={320}
+              height={82}
+              className="h-12 w-auto sm:h-20"
+              priority
+            />
+          </div>
+        </div>
+
         <div className="mx-auto max-w-3xl text-center">
           <h1 className="text-3xl font-bold text-idfm-anthracite sm:text-4xl">Connectez-vous à votre espace famille</h1>
           <p className="mt-4 text-base leading-7 text-neutral-medium">

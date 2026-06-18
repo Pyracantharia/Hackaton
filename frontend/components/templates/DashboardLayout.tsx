@@ -115,10 +115,10 @@ export function DashboardLayout({
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.2fr_1fr_1fr_1fr]">
           <div>
             <Image
-              src="/assets/logos/idfm-logo-horizontal.png"
-              alt="Ile-de-France Mobilites"
-              width={220}
-              height={56}
+              src="/assets/logos/idfm-connect-logo.svg"
+              alt="Ile-de-France Mobilites Connect"
+              width={260}
+              height={52}
               className="h-12 w-auto"
             />
             <p className="mt-4 max-w-sm text-sm leading-6 text-white/75">
