@@ -12,7 +12,7 @@ import { RegisterSuccessStep } from "@/components/organisms/RegisterSuccessStep"
 import { RegisterVerificationStep } from "@/components/organisms/RegisterVerificationStep";
 import { StepIndicator } from "@/components/molecules/StepIndicator";
 import { AuthLayout } from "@/components/templates/AuthLayout";
-import { registerFamily } from "@/lib/api/auth";
+import { getGoogleProfile, registerFamily } from "@/lib/api/auth";
 import type { RegisterFamilyMemberPayload } from "@/lib/api/types";
 import type { RegisterErrors, RegisterFormState, RegisterResult } from "@/components/register/types";
 import { isStrongPassword } from "@/components/molecules/PasswordChecklist";
@@ -21,6 +21,7 @@ const steps = ["Compte", "Vérification", "Profil", "Rôles", "Préférences", "
 
 const initialForm: RegisterFormState = {
   parent: {
+    authProvider: "LOCAL",
     confirmationPassword: "Password123!",
     email: "sophie.martin@example.com",
     firstName: "Sophie",
@@ -89,8 +90,12 @@ export default function RegisterPage() {
       if (!form.parent.lastName.trim()) nextErrors.lastName = "Indiquez votre nom.";
       if (!emailPattern.test(form.parent.email)) nextErrors.email = "Indiquez une adresse e-mail valide.";
       if (!phonePattern.test(form.parent.phone)) nextErrors.phone = "Utilisez un numéro au format international, par exemple +33612345678.";
-      if (!isStrongPassword(form.parent.password)) nextErrors.password = "Le mot de passe ne respecte pas tous les critères.";
-      if (form.parent.password !== form.parent.confirmationPassword) nextErrors.confirmationPassword = "Les deux mots de passe doivent être identiques.";
+      if (form.parent.authProvider === "GOOGLE") {
+        if (!form.parent.googleIdToken) nextErrors.email = "Relancez la connexion Google pour confirmer votre adresse e-mail.";
+      } else {
+        if (!isStrongPassword(form.parent.password)) nextErrors.password = "Le mot de passe ne respecte pas tous les critères.";
+        if (form.parent.password !== form.parent.confirmationPassword) nextErrors.confirmationPassword = "Les deux mots de passe doivent être identiques.";
+      }
     }
 
     if (step === 2) {
@@ -162,10 +167,12 @@ export default function RegisterPage() {
         consents: form.consents,
         members,
         parent: {
+          authProvider: form.parent.authProvider,
           email: form.parent.email,
           firstName: form.parent.firstName,
+          googleIdToken: form.parent.googleIdToken,
           lastName: form.parent.lastName,
-          password: form.parent.password,
+          password: form.parent.authProvider === "GOOGLE" ? undefined : form.parent.password,
           phone: form.parent.phone,
         },
         roles: form.roles,
@@ -180,6 +187,32 @@ export default function RegisterPage() {
       setGlobalError(error instanceof Error ? error.message : "Impossible de créer l'espace famille.");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleGoogleRegisterCredential(credential: string) {
+    setGlobalError("");
+    setErrors({});
+
+    try {
+      const profile = await getGoogleProfile(credential);
+
+      setForm((state) => ({
+        ...state,
+        parent: {
+          ...state.parent,
+          authProvider: "GOOGLE",
+          confirmationPassword: "",
+          email: profile.email,
+          firstName: profile.firstName || state.parent.firstName,
+          googleAvatarUrl: profile.avatarUrl,
+          googleIdToken: credential,
+          lastName: profile.lastName || state.parent.lastName,
+          password: "",
+        },
+      }));
+    } catch (error) {
+      setGlobalError(error instanceof Error ? error.message : "Connexion Google impossible.");
     }
   }
 
@@ -232,6 +265,8 @@ export default function RegisterPage() {
             data={form.parent}
             errors={errors}
             onChange={(field, value) => setForm((state) => ({ ...state, parent: { ...state.parent, [field]: value } }))}
+            onGoogleCredential={handleGoogleRegisterCredential}
+            onGoogleError={setGlobalError}
           />
         ) : null}
 

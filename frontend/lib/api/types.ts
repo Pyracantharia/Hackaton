@@ -25,7 +25,9 @@ export type RegisterFamilyPayload = {
     lastName: string;
     email: string;
     phone: string;
-    password: string;
+    password?: string;
+    authProvider?: "LOCAL" | "GOOGLE";
+    googleIdToken?: string;
   };
   child?: {
     firstName: string;
@@ -92,6 +94,16 @@ export type LoginResponse = {
     email: string;
     role: "USER" | "EMPLOYEE" | "ADMIN";
   };
+};
+
+export type GoogleProfileResponse = {
+  provider: "GOOGLE";
+  providerId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl: string | null;
+  emailVerified: boolean;
 };
 
 export type DashboardMemberProfileType = "MANAGER" | "YOUNG" | "SENIOR" | "OTHER";

@@ -3,6 +3,7 @@ import { AuthService } from "./auth.service";
 import { LoginDto } from "./dtos/login.dto";
 import { RegisterFamilyDto } from "./dtos/register-family.dto";
 import { RegisterUserDto } from "./dtos/register-user.dto";
+import { GoogleAuthDto } from "./dtos/google-auth.dto";
 
 @Controller('api/auth')
 export class AuthController {
@@ -30,5 +31,21 @@ export class AuthController {
     @Body() body: LoginDto
   ){
     return await this.authService.login(body)
+  }
+
+  @Post('google-profile')
+  @HttpCode(200)
+  async googleProfile(
+    @Body() body: GoogleAuthDto
+  ){
+    return await this.authService.googleProfile(body)
+  }
+
+  @Post('google-login')
+  @HttpCode(200)
+  async googleLogin(
+    @Body() body: GoogleAuthDto
+  ){
+    return await this.authService.googleLogin(body)
   }
 }

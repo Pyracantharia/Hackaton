@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsPhoneNumber,
   IsString,
+  ValidateIf,
   Matches,
   ArrayMinSize,
   ValidateNested,
@@ -43,11 +44,21 @@ export class RegisterFamilyParentDto {
   @IsPhoneNumber()
   phone: string;
 
+  @IsOptional()
+  @IsIn(["LOCAL", "GOOGLE"])
+  authProvider?: "LOCAL" | "GOOGLE";
+
+  @ValidateIf((parent: RegisterFamilyParentDto) => parent.authProvider !== "GOOGLE")
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d\s])\S{12,}$/, {
     message:
       "Le mot de passe doit contenir 12 caractères minimum, une minuscule, une majuscule, un chiffre, un caractère spécial et aucun espace.",
   })
-  password: string;
+  password?: string;
+
+  @ValidateIf((parent: RegisterFamilyParentDto) => parent.authProvider === "GOOGLE")
+  @IsString()
+  @IsNotEmpty()
+  googleIdToken?: string;
 }
 
 export class RegisterFamilyChildDto {

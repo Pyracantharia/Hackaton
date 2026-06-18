@@ -205,6 +205,11 @@ enum MemberDetailActionVariant {
   GHOST
 }
 
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
 model User {
   id            String      @id @default(uuid())
   firstName     String      @default("")
@@ -212,6 +217,9 @@ model User {
   email         String      @unique
   phone         String      @default("")
   passwordHash  String      @default("")
+  authProvider  AuthProvider @default(LOCAL)
+  providerId    String?
+  avatarUrl     String?
   role          UserRole    @default(USER)
   phoneVerified Boolean     @default(false)
   emailVerified Boolean     @default(false)
@@ -219,6 +227,8 @@ model User {
   consents      Consent[]
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  @@unique([authProvider, providerId])
 }
 
 model Household {

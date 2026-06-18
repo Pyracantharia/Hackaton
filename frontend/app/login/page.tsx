@@ -7,9 +7,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/atoms/Button";
 import { AuthCard } from "@/components/molecules/AuthCard";
 import { CreateAccountCard } from "@/components/molecules/CreateAccountCard";
+import { GoogleAuthButton } from "@/components/molecules/GoogleAuthButton";
 import { LoginForm } from "@/components/molecules/LoginForm";
-import { AppNavbar } from "@/components/organisms/AppNavbar";
-import { login } from "@/lib/api/auth";
+import { login, loginWithGoogle } from "@/lib/api/auth";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -58,6 +58,23 @@ export default function LoginPage() {
     }
   }
 
+  async function handleGoogleLoginCredential(credential: string) {
+    setSubmitError("");
+    setErrors({});
+    setIsSubmitting(true);
+
+    try {
+      const response = await loginWithGoogle(credential);
+      localStorage.setItem("familyAccessToken", response.accessToken);
+      sessionStorage.setItem("familyUser", JSON.stringify(response.user));
+      router.push(response.user.role === "ADMIN" ? "/dashboard/admin" : "/dashboard/family");
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Connexion Google impossible pour le moment.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-neutral-xlight">
 
@@ -71,6 +88,17 @@ export default function LoginPage() {
 
         <div className="mx-auto mt-8 grid max-w-5xl gap-6 lg:grid-cols-2">
           <AuthCard title="Je me connecte">
+            <div className="mb-5 grid gap-3">
+              <GoogleAuthButton
+                disabled={isSubmitting}
+                label="Se connecter avec Google"
+                onCredential={handleGoogleLoginCredential}
+                onError={setSubmitError}
+              />
+              <p className="text-sm leading-6 text-neutral-medium">
+                Google confirme uniquement votre identité. Les informations de votre foyer restent dans votre espace famille.
+              </p>
+            </div>
             <LoginForm
               email={email}
               errors={errors}

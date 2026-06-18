@@ -36,3 +36,14 @@
 # UI
 
 - Changer îcone "retrouver mon passe"
+
+
+## Option perte de pass navigo
+
+- Déclarer ma carte comme perdue et faire une demande de recréation de carte
+
+- Déclarer ma carte perdue et attendre un délai de 2 semaine avant la création de la nouvelle carte. Dans ce laps de temps, le titre passe en numérique
+
+- Simplement déclaré ma carte comme perdue, ne pas passer en numérique et acheter des tickets pour me déplacer
+
+- Déclarer ma carte comme perdue et rester définitivement en numérique

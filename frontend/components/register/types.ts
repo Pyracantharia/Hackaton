@@ -8,9 +8,12 @@ import type {
 } from "@/lib/api/types";
 
 export type ParentForm = {
+  authProvider: "LOCAL" | "GOOGLE";
   confirmationPassword: string;
   email: string;
   firstName: string;
+  googleIdToken?: string;
+  googleAvatarUrl?: string | null;
   lastName: string;
   password: string;
   phone: string;

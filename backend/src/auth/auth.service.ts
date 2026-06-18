@@ -3,8 +3,20 @@ import { JwtService } from "@nestjs/jwt";
 import { LoginDto } from "./dtos/login.dto";
 import { RegisterUserDto } from "./dtos/register-user.dto";
 import { RegisterFamilyDto } from "./dtos/register-family.dto";
+import { GoogleAuthDto } from "./dtos/google-auth.dto";
 import { PrismaService } from "src/prisma/prisma.service";
 import argon2 from "argon2";
+
+type GoogleTokenInfo = {
+  aud?: string;
+  email?: string;
+  email_verified?: string | boolean;
+  family_name?: string;
+  given_name?: string;
+  name?: string;
+  picture?: string;
+  sub?: string;
+};
 
 @Injectable()
 export class AuthService {
@@ -34,6 +46,60 @@ export class AuthService {
     return Number.isFinite(age) ? age : null;
   }
 
+  private normalizeEmail(email: string) {
+    return email.trim().toLowerCase();
+  }
+
+  private async verifyGoogleCredential(credential: string) {
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+
+    if (!googleClientId) {
+      throw new InternalServerErrorException("La connexion Google n'est pas configurée côté serveur.");
+    }
+
+    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+
+    if (!response.ok) {
+      throw new UnauthorizedException("La connexion Google a échoué. Réessayez avec votre compte Google.");
+    }
+
+    const tokenInfo = await response.json() as GoogleTokenInfo;
+
+    if (tokenInfo.aud !== googleClientId) {
+      throw new UnauthorizedException("Le token Google ne correspond pas à cette application.");
+    }
+
+    if (!tokenInfo.sub) {
+      throw new UnauthorizedException("Google n'a pas retourné d'identifiant de compte.");
+    }
+
+    if (!tokenInfo.email) {
+      throw new BadRequestException("Google n'a pas retourné d'adresse e-mail.");
+    }
+
+    return {
+      providerId: tokenInfo.sub,
+      email: this.normalizeEmail(tokenInfo.email),
+      firstName: tokenInfo.given_name ?? tokenInfo.name?.split(" ")[0] ?? "",
+      lastName: tokenInfo.family_name ?? tokenInfo.name?.split(" ").slice(1).join(" ") ?? "",
+      avatarUrl: tokenInfo.picture ?? null,
+      emailVerified: tokenInfo.email_verified === true || tokenInfo.email_verified === "true",
+    };
+  }
+
+  private buildAuthResponse(user: { id: string; firstName: string; lastName: string; email: string; role: string }) {
+    return this.signAccessToken(user).then((accessToken) => ({
+      accessToken,
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+      },
+    }));
+  }
+
   async login(data: LoginDto) {
     const user = await this.prismaService.user.findUnique({
       where: { email: data.email },
@@ -43,24 +109,48 @@ export class AuthService {
       throw new UnauthorizedException("Adresse e-mail ou mot de passe incorrect.");
     }
 
+    if (user.authProvider === "GOOGLE" && !user.passwordHash) {
+      throw new UnauthorizedException("Ce compte utilise Google. Cliquez sur Se connecter avec Google.");
+    }
+
     const passwordMatches = await argon2.verify(user.passwordHash, data.password);
 
     if (!passwordMatches) {
       throw new UnauthorizedException("Adresse e-mail ou mot de passe incorrect.");
     }
 
-    const accessToken = await this.signAccessToken(user);
+    return this.buildAuthResponse(user);
+  }
+
+  async googleProfile(data: GoogleAuthDto) {
+    const profile = await this.verifyGoogleCredential(data.credential);
 
     return {
-      accessToken,
-      user: {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-      },
+      provider: "GOOGLE",
+      providerId: profile.providerId,
+      email: profile.email,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      avatarUrl: profile.avatarUrl,
+      emailVerified: profile.emailVerified,
     };
+  }
+
+  async googleLogin(data: GoogleAuthDto) {
+    const profile = await this.verifyGoogleCredential(data.credential);
+    const user = await this.prismaService.user.findUnique({
+      where: { email: profile.email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("Aucun compte famille n'est lié à ce compte Google. Créez d'abord votre espace famille avec Google.");
+    }
+
+    if (user.authProvider !== "GOOGLE" || user.providerId !== profile.providerId) {
+      throw new BadRequestException("Cette adresse e-mail existe déjà avec une connexion classique. Connectez-vous avec votre mot de passe avant de lier Google.");
+    }
+
+    return this.buildAuthResponse(user);
   }
 
   async registerUser(data: RegisterUserDto) {
@@ -149,25 +239,38 @@ export class AuthService {
         }
       }
 
+      const parentEmail = this.normalizeEmail(data.parent.email);
+      const authProvider = data.parent.authProvider ?? "LOCAL";
+      const googleProfile = authProvider === "GOOGLE"
+        ? await this.verifyGoogleCredential(data.parent.googleIdToken ?? "")
+        : null;
+
+      if (googleProfile && googleProfile.email !== parentEmail) {
+        throw new BadRequestException("L'adresse e-mail Google ne correspond pas à l'adresse du formulaire.");
+      }
+
       const existingUser = await this.prismaService.user.findUnique({
-        where: { email: data.parent.email },
+        where: { email: parentEmail },
       });
 
       if (existingUser) {
         throw new BadRequestException("Un utilisateur avec cet email existe déjà");
       }
 
-      const passwordHash = await argon2.hash(data.parent.password);
+      const passwordHash = authProvider === "GOOGLE" ? "" : await argon2.hash(data.parent.password ?? "");
       const result = await this.prismaService.$transaction(async (tx) => {
         const user = await tx.user.create({
           data: {
             firstName: data.parent.firstName,
             lastName: data.parent.lastName,
-            email: data.parent.email,
+            email: parentEmail,
             phone: data.parent.phone,
             passwordHash,
+            authProvider,
+            providerId: googleProfile?.providerId,
+            avatarUrl: googleProfile?.avatarUrl,
             phoneVerified: true,
-            emailVerified: true,
+            emailVerified: authProvider === "GOOGLE" ? (googleProfile?.emailVerified ?? true) : true,
           },
         });
 

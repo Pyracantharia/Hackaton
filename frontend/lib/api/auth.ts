@@ -1,5 +1,5 @@
 import { buildApiUrl } from "../api";
-import type { LoginPayload, LoginResponse, RegisterFamilyPayload, RegisterFamilyResponse } from "./types";
+import type { GoogleProfileResponse, LoginPayload, LoginResponse, RegisterFamilyPayload, RegisterFamilyResponse } from "./types";
 
 async function parseApiError(response: Response) {
   const data = await response.json().catch(() => null);
@@ -58,6 +58,38 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
   } catch {
     throw new Error("Impossible de joindre le service de connexion. Vérifiez que le backend est démarré.");
   }
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json() as Promise<LoginResponse>;
+}
+
+export async function getGoogleProfile(credential: string): Promise<GoogleProfileResponse> {
+  const response = await fetch(buildApiUrl("/api/auth/google-profile"), {
+    body: JSON.stringify({ credential }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json() as Promise<GoogleProfileResponse>;
+}
+
+export async function loginWithGoogle(credential: string): Promise<LoginResponse> {
+  const response = await fetch(buildApiUrl("/api/auth/google-login"), {
+    body: JSON.stringify({ credential }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
 
   if (!response.ok) {
     throw new Error(await parseApiError(response));
