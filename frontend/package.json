@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@capacitor/android": "^7.6.7",
+    "@capacitor/core": "^7.6.7",
+    "@capacitor/ios": "^7.6.7",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@stripe/react-stripe-js": "^6.6.0",
@@ -21,6 +24,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.6.7",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.20.0",

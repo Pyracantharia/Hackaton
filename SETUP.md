@@ -67,3 +67,23 @@ docker rm temp-cap
 ```
 
 L'APK est généré dans `./app-debug.apk`.
+
+### IOS
+
+Le dossier `frontend/ios` est généré avec Capacitor et charge le frontend de prod:
+
+```bash
+cd frontend
+npm install
+npx cap sync ios
+```
+
+Le build iOS doit être fait sur macOS avec Xcode et CocoaPods:
+
+```bash
+cd frontend/ios/App
+pod install
+open App.xcworkspace
+```
+
+Ensuite, sélectionner l'équipe Apple/signing dans Xcode puis lancer le build ou l'archive.

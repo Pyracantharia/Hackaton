@@ -1,0 +1,9 @@
+{
+  "appId": "com.rapycan.hackaton",
+  "appName": "IDF Mobilités",
+  "webDir": "www",
+  "server": {
+    "url": "https://app.cestpeutetrepasdesrumeurs.space",
+    "cleartext": false
+  }
+}
