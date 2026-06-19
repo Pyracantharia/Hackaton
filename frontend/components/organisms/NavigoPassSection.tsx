@@ -158,14 +158,16 @@ export function NavigoPassSection({ pass, memberName, onSwitchSupport }: NavigoP
               <p className="text-sm font-bold uppercase tracking-wide text-neutral-medium">Titulaire</p>
               <p className="text-xl font-bold text-idfm-anthracite">{currentPass.holderName}</p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,1.2fr)]">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-wide text-neutral-medium">Titre associé</p>
-                <p className="font-semibold text-idfm-anthracite">{currentPass.productName}</p>
+            <div className="grid gap-3">
+              <div className="rounded-2xl bg-white px-4 py-3">
+                <p className="text-sm font-bold uppercase tracking-wide text-neutral-medium">Titre associe</p>
+                <p className="mt-2 text-lg font-semibold text-idfm-anthracite">{currentPass.productName}</p>
               </div>
-              <div>
+              <div className="rounded-2xl bg-white px-4 py-3">
                 <p className="text-sm font-bold uppercase tracking-wide text-neutral-medium">ID Navigo</p>
-                <p className="font-semibold text-idfm-anthracite whitespace-nowrap">{currentPass.navigoNumberMasked}</p>
+                <p className="mt-2 inline-flex max-w-full rounded-xl bg-idfm-light px-3 py-2 font-mono text-lg font-semibold text-idfm-anthracite whitespace-nowrap">
+                  {currentPass.navigoNumberMasked}
+                </p>
               </div>
             </div>
             <div>
